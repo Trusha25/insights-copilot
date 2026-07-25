@@ -1,21 +1,37 @@
-/**
- * Sends a project idea to the backend FastAPI endpoint for AI research analysis.
- * @param {string} idea - The project idea to analyze.
- * @returns {Promise<{research: string, sources: string[]}>} The analysis response.
- */
 export async function analyzeIdea(idea) {
-  const response = await fetch('http://localhost:8000/analyze', {
+  const response = await fetch('http://localhost:8000/api/analyze', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idea }),
   });
-
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
     throw new Error(errorBody.detail || `Server returned status ${response.status}`);
   }
+  return await response.json();
+}
 
+export async function fetchHistory() {
+  const response = await fetch('http://localhost:8000/api/history');
+  if (!response.ok) throw new Error('Failed to fetch history');
+  return await response.json();
+}
+
+export async function fetchHistoryItem(id) {
+  const response = await fetch(`http://localhost:8000/api/history/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch history item');
+  return await response.json();
+}
+
+export async function askMentor(payload) {
+  const response = await fetch('http://localhost:8000/api/mentor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.detail || `Server returned status ${response.status}`);
+  }
   return await response.json();
 }

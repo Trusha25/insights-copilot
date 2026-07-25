@@ -1,6 +1,13 @@
 # Insights Copilot
 
-Insights Copilot is an AI-powered research assistant built with **FastAPI**, **Groq (llama-3.3-70b-versatile)**, and **React + Tailwind CSS**. It analyzes project ideas, evaluates market landscape, and returns structured research summaries alongside referenced sources.
+Insights Copilot is an AI-powered research assistant that utilizes Groq's high-speed inference to search the web, GitHub, and research papers, and converge everything into one working project plan.
+
+## Features
+
+- **DeepSearch (Research Agent)**: Queries multiple sources to build a comprehensive summary of existing solutions, prior art, and pain points for any given project idea.
+- **Project HUB (Planner Agent)**: Synthesizes the research findings to generate a tailored, structured roadmap, including a recommended tech stack, actionable milestones, and an estimated timeline.
+- **Research Workspaces**: Keeps an in-memory history of your past analyzed ideas in a convenient sidebar. Quickly switch between past case files without re-triggering the LLM or losing your session context.
+- **"Layer 2" UI**: A dark, modern, highly polished React frontend designed for a professional developer experience.
 
 ---
 

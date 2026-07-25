@@ -1,64 +1,61 @@
 import React from 'react';
-import { Target, Layers, Cpu, ArrowRight } from './Icons';
 
-export default function PlanCard({ idea }) {
-  if (!idea) return null;
+export default function PlanCard({ status, roadmap }) {
+  const isLoading = status === "loading";
+  
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm min-h-[400px] flex items-center justify-center">
+        <div className="text-slate-500 text-lg">Generating Execution Roadmap...</div>
+      </div>
+    );
+  }
 
-  const planSteps = [
-    {
-      step: '01',
-      title: 'Problem & Audience Validation',
-      desc: 'Conduct interviews with target users to validate pain points and demand.',
-      icon: Target,
-    },
-    {
-      step: '02',
-      title: 'MVP Scope & Architecture',
-      desc: 'Define core user flows and establish modular API endpoints.',
-      icon: Layers,
-    },
-    {
-      step: '03',
-      title: 'AI Agent Integration',
-      desc: 'Deploy fast inference agents with fallback logic and structured JSON outputs.',
-      icon: Cpu,
-    },
-  ];
+  if (!roadmap || roadmap.length === 0) return null;
 
   return (
-    <div className="glass-card rounded-2xl p-6 md:p-8 shadow-2xl border border-slate-800 relative overflow-hidden">
-      {/* Card Header */}
-      <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-800/80">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300">
-            <Target className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold text-white tracking-tight">Execution Roadmap</h2>
-            <p className="text-xs text-slate-400">Actionable steps for initial prototype</p>
-          </div>
-        </div>
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-fit">
+      <div className="flex items-center gap-2 mb-8 border-b border-slate-100 pb-4">
+        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        <h3 className="text-xl font-bold text-slate-800">5-Step Execution Roadmap</h3>
       </div>
 
-      {/* Plan Steps */}
-      <div className="space-y-4">
-        {planSteps.map((item, index) => {
-          const Icon = item.icon;
+      <div className="space-y-8 relative before:absolute before:inset-0 before:ml-[19px] before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200">
+        {roadmap.slice(0, 5).map((item, index) => {
+          // Colors sequence based on the screenshot mockup
+          const colors = [
+            { bg: "bg-indigo-600", light: "bg-indigo-50 text-indigo-700" },
+            { bg: "bg-blue-600", light: "bg-blue-50 text-blue-700" },
+            { bg: "bg-emerald-600", light: "bg-emerald-50 text-emerald-700" },
+            { bg: "bg-violet-600", light: "bg-violet-50 text-violet-700" },
+            { bg: "bg-orange-500", light: "bg-orange-50 text-orange-700" },
+          ];
+          const color = colors[index % colors.length];
+
           return (
-            <div
-              key={index}
-              className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 hover:border-slate-700 transition-all flex items-start gap-4"
-            >
-              <div className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20 shrink-0">
-                {item.step}
+            <div key={index} className="relative flex items-start gap-5">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base z-10 shrink-0 ${color.bg} shadow-sm outline outline-4 outline-white`}>
+                {index + 1}
               </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
-                  <span>{item.title}</span>
-                </h4>
-                <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
+              <div className="flex-1 pb-6 border-b border-slate-100 last:border-0 last:pb-0 pt-1">
+                <div className="flex justify-between items-start mb-3">
+                  <h4 className="font-bold text-slate-800 text-lg">{item.milestone}</h4>
+                  <span className={`px-3 py-1 rounded-md text-sm font-semibold ${color.light}`}>
+                    {item.duration}
+                  </span>
+                </div>
+                {item.tasks && item.tasks.length > 0 ? (
+                  <ul className="list-disc pl-5 text-base text-slate-700 space-y-2">
+                    {item.tasks.map((task, idx) => (
+                      <li key={idx}>{task}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ul className="list-disc pl-5 text-base text-slate-700 space-y-2">
+                    <li>{item.description || "No tasks provided."}</li>
+                  </ul>
+                )}
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-600 self-center shrink-0" />
             </div>
           );
         })}

@@ -1,96 +1,62 @@
 import React from 'react';
-import { BookOpen, ExternalLink, Sparkles, CheckCircle2 } from './Icons';
 
-export default function ResearchCard({ research, sources }) {
+export default function ResearchCard({ status, research, critique }) {
+  const isLoading = status === "loading";
+  
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm min-h-[400px] flex items-center justify-center">
+        <div className="text-slate-500 text-lg">Analyzing Startup Idea...</div>
+      </div>
+    );
+  }
+
   if (!research) return null;
 
-  // Format simple markdown headers and bolding for display
-  const formatResearchText = (text) => {
-    if (!text) return '';
-    return text.split('\n\n').map((paragraph, index) => {
-      if (paragraph.startsWith('### ')) {
-        return (
-          <h3 key={index} className="text-xl font-bold text-indigo-300 mt-5 mb-2 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-indigo-400"></span>
-            {paragraph.replace('### ', '')}
-          </h3>
-        );
-      }
-      if (paragraph.startsWith('## ')) {
-        return (
-          <h2 key={index} className="text-2xl font-bold text-white mt-6 mb-3 border-b border-slate-800 pb-2">
-            {paragraph.replace('## ', '')}
-          </h2>
-        );
-      }
-      if (paragraph.startsWith('1. ') || paragraph.startsWith('2. ') || paragraph.startsWith('3. ') || paragraph.startsWith('- ')) {
-        const items = paragraph.split('\n');
-        return (
-          <ul key={index} className="space-y-2 my-3 pl-1">
-            {items.map((item, idx) => (
-              <li key={idx} className="flex items-start gap-2.5 text-slate-300 text-sm leading-relaxed">
-                <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0 mt-1" />
-                <span>{item.replace(/^(\d+\.|\-)\s*/, '')}</span>
-              </li>
-            ))}
-          </ul>
-        );
-      }
-      return (
-        <p key={index} className="text-slate-300 text-sm md:text-base leading-relaxed my-3">
-          {paragraph}
-        </p>
-      );
-    });
-  };
-
   return (
-    <div className="glass-card rounded-2xl p-6 md:p-8 shadow-2xl border border-indigo-500/20 relative overflow-hidden transition-all duration-300 hover:border-indigo-500/40">
-      {/* Background Accent Glow */}
-      <div className="absolute -top-24 -right-24 w-60 h-60 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      {/* Card Header */}
-      <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-800/80">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold text-white tracking-tight">Research Analysis</h2>
-            <p className="text-xs text-slate-400">Powered by Groq & llama-3.3-70b-versatile</p>
-          </div>
-        </div>
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-          AI Verified
-        </span>
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-fit">
+      <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          Technical Analysis
+        </h3>
       </div>
 
-      {/* Research Content */}
-      <div className="prose prose-invert max-w-none mb-8 text-slate-200">
-        {formatResearchText(research)}
-      </div>
-
-      {/* Sources Section */}
-      {sources && sources.length > 0 && (
-        <div className="pt-6 border-t border-slate-800/80">
-          <div className="flex items-center gap-2 mb-4 text-slate-300 text-sm font-semibold">
-            <BookOpen className="w-4 h-4 text-indigo-400" />
-            <span>Referenced Sources & Market Solutions ({sources.length})</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {sources.map((source, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-indigo-500/30 transition-all text-xs text-slate-300 group"
-              >
-                <span className="truncate pr-2 font-medium">{source}</span>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 shrink-0 transition-colors" />
-              </div>
-            ))}
-          </div>
+      <div className="space-y-6">
+        <div>
+          <h4 className="font-bold text-lg text-slate-800 mb-2">Problem Overview</h4>
+          <p className="text-base text-slate-700 leading-relaxed">
+            {research.problem_validation || "N/A"}
+          </p>
         </div>
-      )}
+
+        <div>
+          <h4 className="font-bold text-lg text-slate-800 mb-2">Market Opportunity</h4>
+          <p className="text-base text-slate-700 leading-relaxed mb-3">
+            {research.market_research_summary || "N/A"}
+          </p>
+          {research.innovation_opportunities && research.innovation_opportunities.length > 0 && (
+            <ul className="list-disc pl-6 text-base text-slate-700 space-y-2 mt-2 marker:text-blue-500">
+              {research.innovation_opportunities.map((opp, idx) => (
+                <li key={idx}>{opp}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <h4 className="font-bold text-lg text-slate-800 mb-2">Risks & Critique</h4>
+          {critique?.flagged_issues && critique.flagged_issues.length > 0 ? (
+             <ul className="list-disc pl-6 text-base text-slate-700 space-y-2 marker:text-red-500">
+               {critique.flagged_issues.map((issue, idx) => (
+                 <li key={idx}>{issue}</li>
+               ))}
+             </ul>
+          ) : (
+            <p className="text-base text-slate-700">No major risks flagged.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
