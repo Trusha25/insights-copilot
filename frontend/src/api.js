@@ -24,7 +24,7 @@ export async function fetchHistoryItem(id) {
 }
 
 export async function askMentor(payload) {
-  const response = await fetch('http://localhost:8000/api/mentor', {
+  const response = await fetch('https://insights-copilot-s35d.onrender.com/api/mentor', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
