@@ -1,5 +1,5 @@
 export async function analyzeIdea(idea) {
-  const response = await fetch('http://localhost:8000/api/analyze', {
+  const response = await fetch('https://insights-copilot-s35d.onrender.com/api/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idea }),
@@ -12,13 +12,13 @@ export async function analyzeIdea(idea) {
 }
 
 export async function fetchHistory() {
-  const response = await fetch('http://localhost:8000/api/history');
+  const response = await fetch('https://insights-copilot-s35d.onrender.com/api/history');
   if (!response.ok) throw new Error('Failed to fetch history');
   return await response.json();
 }
 
 export async function fetchHistoryItem(id) {
-  const response = await fetch(`http://localhost:8000/api/history/${id}`);
+  const response = await fetch(`https://insights-copilot-s35d.onrender.com/api/history/${id}`);
   if (!response.ok) throw new Error('Failed to fetch history item');
   return await response.json();
 }
