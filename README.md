@@ -47,10 +47,15 @@ Never lose a good idea. The backend passively saves every completed analysis int
    GROQ_API_KEY=your_groq_api_key
    TAVILY_API_KEY=your_tavily_api_key
    GITHUB_TOKEN=optional_but_recommended
+   TELEGRAM_BOT_TOKEN=your_telegram_bot_token
    ```
 5. Run the server (this will automatically generate the `insights.db` SQLite file on startup):
    ```bash
    uvicorn main:app --reload
+   ```
+6. Run the Telegram Bot (in a separate terminal window, with the same `venv` activated):
+   ```bash
+   python bot/telegram_bot.py
    ```
 
 ### 2. Frontend Setup (React + Tailwind + Mermaid)

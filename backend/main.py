@@ -4,8 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any
 from agents import research_agent, planner_agent, critic_agent, mentor_agent
-from db import init_db, save_history, get_all_history_summaries, get_history_by_id
+from db import init_db, save_history, get_all_history_summaries, get_history_by_id, create_workspace, get_workspace
 import os
+import uuid
 import logging
 
 logger = logging.getLogger(__name__)
@@ -72,7 +73,14 @@ async def analyze(payload: IdeaRequest):
     # 3. Critic Agent
     critique = await critic_agent(idea, research, plan)
     
+    workspace_id = str(uuid.uuid4())
+    try:
+        create_workspace(workspace_id, idea, research, plan)
+    except Exception as e:
+        logger.error(f"Failed to create workspace: {e}")
+
     result = {
+        "workspace_id": workspace_id,
         "research": research,
         "plan": plan,
         "critique": critique
@@ -83,6 +91,14 @@ async def analyze(payload: IdeaRequest):
     except Exception as e:
         logger.error(f"Failed to save history: {e}")
     return result
+
+@app.get("/api/workspaces/{workspace_id}/telegram-link")
+def get_telegram_link_endpoint(workspace_id: str):
+    workspace = get_workspace(workspace_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "insights_copilot_bot")
+    return {"deep_link": f"https://t.me/{bot_username}?start={workspace_id}"}
 
 @app.get("/api/history")
 def get_history():
