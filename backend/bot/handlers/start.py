@@ -1,9 +1,5 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-import sys
-import os
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from db import link_telegram, get_workspace
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

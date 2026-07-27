@@ -1,13 +1,10 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-import sys
-import os
 import httpx
 import logging
 
 logger = logging.getLogger(__name__)
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from db import get_telegram_link, get_workspace
 
 async def question_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -39,7 +36,7 @@ async def question_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         async with httpx.AsyncClient() as client:
-            # We call the local API server directly
+            # Call the local API server directly
             response = await client.post("http://localhost:8000/api/mentor", json=payload, timeout=60.0)
             response.raise_for_status()
             data = response.json()

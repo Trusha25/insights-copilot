@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import Dict, Any
 from agents import research_agent, planner_agent, critic_agent, mentor_agent
@@ -8,19 +9,70 @@ from db import init_db, save_history, get_all_history_summaries, get_history_by_
 import os
 import uuid
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Telegram Bot — runs in a background thread alongside FastAPI
+# ---------------------------------------------------------------------------
+def _run_telegram_bot():
+    """Starts the Telegram bot polling in its own thread + event loop."""
+    import asyncio
+    from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
+    from bot.handlers.start import start_handler
+    from bot.handlers.status import status_handler
+    from bot.handlers.done import done_handler
+    from bot.handlers.question import question_handler
+    from bot.scheduler import start_scheduler
+
+    async def post_init(application):
+        start_scheduler(application)
+
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    if not token or token == "your_telegram_bot_token":
+        logger.warning("TELEGRAM_BOT_TOKEN not set — Telegram bot will NOT start.")
+        return
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        app = ApplicationBuilder().token(token).post_init(post_init).build()
+        app.add_handler(CommandHandler("start", start_handler))
+        app.add_handler(CommandHandler("status", status_handler))
+        app.add_handler(CommandHandler("done", done_handler))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, question_handler))
+
+        logger.info("Telegram Bot starting (polling mode, background thread)...")
+        app.run_polling()
+    except Exception as e:
+        logger.error(f"Telegram bot crashed: {e}")
+
+# ---------------------------------------------------------------------------
+# FastAPI Lifespan — initializes DB + launches Telegram bot thread
+# ---------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app):
+    # --- Startup ---
+    init_db()
+    logger.info("Database initialized on startup")
+
+    bot_thread = threading.Thread(target=_run_telegram_bot, daemon=True)
+    bot_thread.start()
+    logger.info("Telegram bot thread launched")
+
+    yield  # App is running
+
+    # --- Shutdown ---
+    logger.info("Shutting down...")
 
 app = FastAPI(
     title="Insights Copilot API",
     description="FastAPI backend for Insights Copilot four-agent architecture",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
-
-@app.on_event("startup")
-async def startup_event():
-    init_db()
-    logger.info("Database initialized on startup")
 
 # Global Exception Handler to catch all uncaught exceptions
 @app.exception_handler(Exception)
