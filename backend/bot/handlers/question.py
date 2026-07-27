@@ -35,27 +35,31 @@ async def question_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     try:
-        async with httpx.AsyncClient() as client:
-            # Call the local API server directly
-            response = await client.post("http://localhost:8000/api/mentor", json=payload, timeout=60.0)
-            response.raise_for_status()
-            data = response.json()
-            
-            answer = data.get("answer", "I couldn't generate an answer.")
-            resources = data.get("learning_resources", [])
-            
-            final_msg = answer
-            if resources:
-                final_msg += "\n\n*Helpful Resources:*\n"
-                for res in resources:
-                    final_msg += f"• [{res.get('title', 'Link')}]({res.get('url', '')})\n"
+        from agents import mentor_agent
+        
+        # Call the mentor agent directly instead of via HTTP
+        data = await mentor_agent(
+            idea=workspace["idea"],
+            research=workspace["research"],
+            plan=workspace["plan"],
+            question=text
+        )
+        
+        answer = data.get("answer", "I couldn't generate an answer.")
+        resources = data.get("learning_resources", [])
+        
+        final_msg = answer
+        if resources:
+            final_msg += "\n\n*Helpful Resources:*\n"
+            for res in resources:
+                final_msg += f"• [{res.get('title', 'Link')}]({res.get('url', '')})\n"
 
-            await context.bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=processing_msg.message_id,
-                text=final_msg,
-                parse_mode='Markdown'
-            )
+        await context.bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=processing_msg.message_id,
+            text=final_msg,
+            parse_mode='Markdown'
+        )
             
     except Exception as e:
         logger.error(f"Mentor API call failed: {e}")
