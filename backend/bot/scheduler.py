@@ -5,6 +5,19 @@ from db import get_all_telegram_links, get_workspace, update_last_reminder
 
 logger = logging.getLogger(__name__)
 
+def parse_date(date_str):
+    if not date_str:
+        return None
+    try:
+        # Supabase/PostgreSQL ISO format (e.g., 2024-03-20T10:15:30.123+00:00)
+        return datetime.fromisoformat(date_str.replace('Z', '+00:00')).replace(tzinfo=None)
+    except ValueError:
+        try:
+            # Old SQLite format
+            return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return None
+
 async def check_reminders(app):
     logger.info("Running reminder scheduler check...")
     links = get_all_telegram_links()
@@ -19,22 +32,14 @@ async def check_reminders(app):
             linked_at_str = link.get("linked_at")
             last_reminder_str = link.get("last_reminder_at")
             
-            if not linked_at_str:
-                continue
-                
-            try:
-                base_time = datetime.strptime(linked_at_str, "%Y-%m-%d %H:%M:%S")
-            except ValueError:
+            base_time = parse_date(linked_at_str)
+            if not base_time:
                 continue
 
             # Don't send more than one reminder a day
-            if last_reminder_str:
-                try:
-                    last_reminder = datetime.strptime(last_reminder_str, "%Y-%m-%d %H:%M:%S")
-                    if (now - last_reminder).total_seconds() < 86400:
-                        continue
-                except ValueError:
-                    pass
+            last_reminder = parse_date(last_reminder_str)
+            if last_reminder and (now - last_reminder).total_seconds() < 86400:
+                continue
 
             workspace = get_workspace(workspace_id)
             if not workspace:
