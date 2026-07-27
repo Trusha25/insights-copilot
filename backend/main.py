@@ -25,10 +25,6 @@ def _run_telegram_bot():
     from bot.handlers.done import done_handler
     from bot.handlers.question import question_handler
     from bot.scheduler import start_scheduler
-
-    async def post_init(application):
-        start_scheduler(application)
-
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     if not token or token == "your_telegram_bot_token":
         logger.warning("TELEGRAM_BOT_TOKEN not set — Telegram bot will NOT start.")
@@ -38,14 +34,22 @@ def _run_telegram_bot():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-        app = ApplicationBuilder().token(token).post_init(post_init).build()
+        app = ApplicationBuilder().token(token).build()
         app.add_handler(CommandHandler("start", start_handler))
         app.add_handler(CommandHandler("status", status_handler))
         app.add_handler(CommandHandler("done", done_handler))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, question_handler))
 
-        logger.info("Telegram Bot starting (polling mode, background thread)...")
-        app.run_polling()
+        async def _start_bot():
+            await app.initialize()
+            start_scheduler(app)
+            await app.start()
+            await app.updater.start_polling()
+            logger.info("Telegram Bot is now polling!")
+
+        loop.run_until_complete(_start_bot())
+        logger.info("Telegram Bot started (polling mode, background thread)...")
+        loop.run_forever()
     except Exception as e:
         logger.error(f"Telegram bot crashed: {e}")
 
