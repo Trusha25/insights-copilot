@@ -7,37 +7,21 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 # Fallback fake client if env vars are missing so the app doesn't crash on startup
-class DummySupabase:
-    def table(self, name):
-        class DummyTable:
-            def select(self, *args, **kwargs): return self
-            def insert(self, *args, **kwargs): return self
-            def update(self, *args, **kwargs): return self
-            def upsert(self, *args, **kwargs): return self
-            def eq(self, *args, **kwargs): return self
-            def order(self, *args, **kwargs): return self
-            def execute(self): 
-                class DummyRes:
-                    data = []
-                return DummyRes()
-        return DummyTable()
-
 def get_supabase() -> Client:
     url = os.environ.get("SUPABASE_URL", "").strip()
     key = os.environ.get("SUPABASE_KEY", "").strip()
     if not url or not key:
-        logger.warning("Supabase URL or KEY not set. Database operations will fail silently.")
-        return DummySupabase()
+        raise RuntimeError("SUPABASE_URL or SUPABASE_KEY environment variables are missing.")
     return create_client(url, key)
 
 def init_db():
     # In Supabase, initialization happens via SQL scripts run in the Supabase Dashboard.
     # We just verify we can connect.
     url = os.environ.get("SUPABASE_URL", "").strip()
-    if url:
-        logger.info(f"Supabase configured pointing to {url}")
-    else:
-        logger.warning("Supabase not configured in environment variables.")
+    key = os.environ.get("SUPABASE_KEY", "").strip()
+    if not url or not key:
+        raise RuntimeError("SUPABASE_URL or SUPABASE_KEY environment variables are missing. Startup halted.")
+    logger.info(f"Supabase configured pointing to {url}")
 
 def save_history(idea: str, result: dict):
     try:
