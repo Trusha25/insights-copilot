@@ -37,8 +37,20 @@ def save_history(user_id: str, idea: str, result: dict):
 def get_all_history_summaries(user_id: str):
     try:
         supabase = get_supabase()
-        response = supabase.table("history").select("id, idea, timestamp").eq("user_id", user_id).order("id", desc=True).execute()
-        return response.data
+        response = supabase.table("history").select("id, idea, timestamp, result").eq("user_id", user_id).order("id", desc=True).execute()
+        saved_ids = set(get_saved_workspace_ids(user_id))
+        formatted = []
+        for row in response.data:
+            result_dict = row.get("result") or {}
+            ws_id = result_dict.get("workspace_id")
+            formatted.append({
+                "id": row.get("id"),
+                "idea": row.get("idea"),
+                "timestamp": row.get("timestamp"),
+                "workspace_id": ws_id,
+                "is_saved": ws_id in saved_ids if ws_id else False
+            })
+        return formatted
     except Exception as e:
         logger.error(f"Failed to get history summaries from Supabase: {e}")
         return []
@@ -151,3 +163,74 @@ def update_last_reminder(chat_id: str):
         }).eq("chat_id", str(chat_id)).execute()
     except Exception as e:
         logger.error(f"Failed to update last_reminder_at for {chat_id} in Supabase: {e}")
+
+def get_saved_workspace_ids(user_id: str) -> list:
+    try:
+        supabase = get_supabase()
+        response = supabase.table("workspaces").select("id").eq("user_id", user_id).eq("is_saved", True).execute()
+        return [row["id"] for row in response.data] if response.data else []
+    except Exception as e:
+        logger.error(f"Failed to get saved workspace IDs: {e}")
+        return []
+
+def toggle_workspace_saved(workspace_id: str, user_id: str):
+    try:
+        supabase = get_supabase()
+        response = supabase.table("workspaces").select("is_saved").eq("id", workspace_id).eq("user_id", user_id).execute()
+        if not response.data:
+            return None
+        current_state = response.data[0].get("is_saved", False)
+        new_state = not current_state
+        
+        update_res = supabase.table("workspaces").update({"is_saved": new_state}).eq("id", workspace_id).eq("user_id", user_id).execute()
+        return update_res.data[0] if update_res.data else None
+    except Exception as e:
+        logger.error(f"Failed to toggle workspace saved: {e}")
+        return None
+
+def get_saved_workspaces(user_id: str) -> list:
+    try:
+        supabase = get_supabase()
+        response = supabase.table("workspaces").select("id, idea, created_at").eq("user_id", user_id).eq("is_saved", True).order("created_at", desc=True).execute()
+        formatted = []
+        for row in response.data:
+            formatted.append({
+                "id": row["id"],
+                "idea": row["idea"],
+                "timestamp": row["created_at"],
+                "workspace_id": row["id"],
+                "is_saved": True
+            })
+        return formatted
+    except Exception as e:
+        logger.error(f"Failed to get saved workspaces: {e}")
+        return []
+
+def get_user_settings(user_id: str) -> dict:
+    try:
+        supabase = get_supabase()
+        response = supabase.table("user_settings").select("theme").eq("user_id", user_id).execute()
+        if response.data:
+            return {"theme": response.data[0].get("theme", "dark")}
+        
+        default_settings = {"user_id": user_id, "theme": "dark"}
+        supabase.table("user_settings").insert(default_settings).execute()
+        return {"theme": "dark"}
+    except Exception as e:
+        logger.error(f"Failed to get user settings: {e}")
+        return {"theme": "dark"}
+
+def update_user_settings(user_id: str, theme: str) -> dict:
+    try:
+        if theme not in ["light", "dark"]:
+            raise ValueError("Theme must be 'light' or 'dark'")
+        supabase = get_supabase()
+        response = supabase.table("user_settings").upsert({
+            "user_id": user_id,
+            "theme": theme,
+            "updated_at": datetime.utcnow().isoformat() + "Z"
+        }).execute()
+        return {"theme": theme}
+    except Exception as e:
+        logger.error(f"Failed to update user settings: {e}")
+        return {"theme": theme}

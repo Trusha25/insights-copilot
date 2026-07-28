@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { analyzeIdea } from './api';
+import { analyzeIdea, toggleSaveWorkspace, fetchSettings } from './api';
 import Sidebar from './components/Sidebar';
 import ResearchCard from './components/ResearchCard';
 import PlanCard from './components/PlanCard';
@@ -7,6 +7,7 @@ import ArchitectureCard from './components/ArchitectureCard';
 import ResourcesCard from './components/ResourcesCard';
 import HistoryView from './components/HistoryView';
 import LoginView from './components/LoginView';
+import SettingsView from './components/SettingsView';
 import { supabase } from './supabaseClient';
 
 export default function App() {
@@ -23,14 +24,30 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
+    const applyTheme = async () => {
+      try {
+        const data = await fetchSettings();
+        if (data.theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (err) {
+        console.warn("Could not fetch user theme settings, defaulting to dark mode", err);
+        document.documentElement.classList.add('dark'); // Default fallback
+      }
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthLoading(false);
+      if (session) applyTheme();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setAuthLoading(false);
+      if (session) applyTheme();
     });
 
     return () => subscription.unsubscribe();
@@ -96,6 +113,18 @@ export default function App() {
     setCurrentView("dashboard");
   };
 
+  const handleToggleSaveActive = async () => {
+    if (!result?.workspace_id) return;
+    try {
+      const { is_saved } = await toggleSaveWorkspace(result.workspace_id);
+      setResult(prev => ({ ...prev, is_saved }));
+      setToastMessage(is_saved ? "Workspace saved to favorites!" : "Workspace removed from favorites.");
+      setTimeout(() => setToastMessage(""), 3000);
+    } catch (e) {
+      console.error("Failed to toggle save state", e);
+    }
+  };
+
   const handleNavigate = (view) => {
     setCurrentView(view);
   };
@@ -106,6 +135,10 @@ export default function App() {
 
       {currentView === 'history' ? (
         <HistoryView onSelectItem={handleHistorySelect} />
+      ) : currentView === 'saved' ? (
+        <HistoryView onSelectItem={handleHistorySelect} onlySaved={true} />
+      ) : currentView === 'settings' ? (
+        <SettingsView />
       ) : (
         <main className="flex-1 p-6 lg:p-10 min-w-0">
           <header className="flex justify-between items-center border-b border-slate-200 pb-4 mb-8">
@@ -119,6 +152,17 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-3 text-sm font-medium">
+              {status === 'done' && result?.workspace_id && (
+                <button
+                  onClick={handleToggleSaveActive}
+                  className="p-2 text-slate-400 hover:text-amber-500 rounded-xl hover:bg-slate-100/50 transition-colors shrink-0"
+                  title={result.is_saved ? "Remove from Saved" : "Save Workspace"}
+                >
+                  <svg className={`w-6 h-6 ${result.is_saved ? 'text-amber-500 fill-amber-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499c.158-.343.344-.66.52-.947.176.287.362.604.52.947l2.193 4.444a1 1 0 00.758.552l4.904.713c.38.055.53.518.257.788l-3.548 3.46a1 1 0 00-.287.885l.838 4.886c.065.378-.33.666-.67.487l-4.387-2.31a1 1 0 00-.93 0l-4.387 2.31c-.34.179-.735-.109-.67-.487l.838-4.886a1 1 0 00-.287-.885l-3.548-3.46c-.273-.27-.123-.733.257-.788l4.904-.713a1 1 0 00.758-.552l2.193-4.444z" />
+                  </svg>
+                </button>
+              )}
               <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">
                 {status === 'loading' ? elapsedTime : status === 'done' ? elapsedTime : '~0.0s'}
               </span>

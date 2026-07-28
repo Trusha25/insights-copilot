@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import Dict, Any
 from agents import research_agent, planner_agent, critic_agent, mentor_agent
-from db import init_db, save_history, get_all_history_summaries, get_history_by_id, create_workspace, get_workspace, update_workspace_research
+from db import init_db, save_history, get_all_history_summaries, get_history_by_id, create_workspace, get_workspace, update_workspace_research, get_saved_workspace_ids, toggle_workspace_saved, get_saved_workspaces, get_user_settings, update_user_settings
 import os
 import uuid
 import logging
@@ -105,6 +105,9 @@ class MentorRequest(BaseModel):
     plan: dict
     question: str
 
+class SettingsUpdate(BaseModel):
+    theme: str
+
 security = HTTPBearer()
 
 def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
@@ -173,15 +176,46 @@ def get_telegram_link_endpoint(workspace_id: str, user_id: str = Depends(get_cur
     return {"deep_link": f"https://t.me/{bot_username}?start={workspace_id}"}
 
 @app.get("/api/history")
-def get_history(user_id: str = Depends(get_current_user_id)):
+def get_history(saved: bool = False, user_id: str = Depends(get_current_user_id)):
+    if saved:
+        return get_saved_workspaces(user_id)
     return get_all_history_summaries(user_id)
 
 @app.get("/api/history/{history_id}")
-def get_history_item(history_id: int, user_id: str = Depends(get_current_user_id)):
-    item = get_history_by_id(history_id, user_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="History item not found or unauthorized")
-    return item
+def get_history_item(history_id: str, user_id: str = Depends(get_current_user_id)):
+    if history_id.isdigit():
+        item = get_history_by_id(int(history_id), user_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="History item not found or unauthorized")
+        return item
+    else:
+        # It's a workspace UUID
+        workspace = get_workspace(history_id, user_id=user_id)
+        if not workspace:
+            raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
+        return {
+            "workspace_id": workspace["id"],
+            "research": workspace["research_json"],
+            "plan": workspace["plan_json"],
+            "critique": {}
+        }
+
+@app.patch("/api/workspaces/{workspace_id}/save")
+def toggle_save(workspace_id: str, user_id: str = Depends(get_current_user_id)):
+    res = toggle_workspace_saved(workspace_id, user_id)
+    if not res:
+        raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
+    return {"workspace_id": workspace_id, "is_saved": res.get("is_saved", False)}
+
+@app.get("/api/settings")
+def get_settings(user_id: str = Depends(get_current_user_id)):
+    return get_user_settings(user_id)
+
+@app.put("/api/settings")
+def update_settings(payload: SettingsUpdate, user_id: str = Depends(get_current_user_id)):
+    if payload.theme not in ["light", "dark"]:
+        raise HTTPException(status_code=400, detail="Theme must be 'light' or 'dark'")
+    return update_user_settings(user_id, payload.theme)
 
 @app.post("/api/workspaces/{workspace_id}/refresh")
 async def refresh_workspace(workspace_id: str, user_id: str = Depends(get_current_user_id)):

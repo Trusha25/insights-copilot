@@ -25,9 +25,10 @@ export async function analyzeIdea(idea) {
   return await response.json();
 }
 
-export async function fetchHistory() {
+export async function fetchHistory(savedOnly = false) {
   const headers = await getHeaders();
-  const response = await fetch(`${BASE_URL}/api/history`, {
+  const url = savedOnly ? `${BASE_URL}/api/history?saved=true` : `${BASE_URL}/api/history`;
+  const response = await fetch(url, {
     headers,
   });
   if (!response.ok) throw new Error('Failed to fetch history');
@@ -67,5 +68,35 @@ export async function refreshWorkspace(workspaceId) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.detail || 'Failed to refresh workspace research');
   }
+  return await response.json();
+}
+
+export async function toggleSaveWorkspace(workspaceId) {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/workspaces/${workspaceId}/save`, {
+    method: 'PATCH',
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to toggle save workspace');
+  return await response.json();
+}
+
+export async function fetchSettings() {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/settings`, {
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to fetch settings');
+  return await response.json();
+}
+
+export async function saveSettings(theme) {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/settings`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ theme }),
+  });
+  if (!response.ok) throw new Error('Failed to save settings');
   return await response.json();
 }
