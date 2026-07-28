@@ -6,6 +6,8 @@ import PlanCard from './components/PlanCard';
 import ArchitectureCard from './components/ArchitectureCard';
 import ResourcesCard from './components/ResourcesCard';
 import HistoryView from './components/HistoryView';
+import LoginView from './components/LoginView';
+import { supabase } from './supabaseClient';
 
 export default function App() {
   const [idea, setIdea] = useState("");
@@ -17,6 +19,23 @@ export default function App() {
   const [newSourceUrls, setNewSourceUrls] = useState([]);
   const [toastMessage, setToastMessage] = useState("");
 
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   useEffect(() => {
     let interval;
     if (status === "loading") {
@@ -27,6 +46,21 @@ export default function App() {
     }
     return () => clearInterval(interval);
   }, [status]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen w-full bg-[#0b0f19] flex items-center justify-center text-slate-400 font-medium">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-slate-700 border-t-indigo-500 rounded-full animate-spin"></div>
+          <span>Loading session...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginView />;
+  }
 
   const handleAnalyze = async () => {
     if (!idea.trim()) return;

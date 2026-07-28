@@ -23,29 +23,30 @@ def init_db():
         raise RuntimeError("SUPABASE_URL or SUPABASE_KEY environment variables are missing. Startup halted.")
     logger.info(f"Supabase configured pointing to {url}")
 
-def save_history(idea: str, result: dict):
+def save_history(user_id: str, idea: str, result: dict):
     try:
         supabase = get_supabase()
         supabase.table("history").insert({
+            "user_id": user_id,
             "idea": idea,
             "result": result
         }).execute()
     except Exception as e:
         logger.error(f"Failed to save history to Supabase: {e}")
 
-def get_all_history_summaries():
+def get_all_history_summaries(user_id: str):
     try:
         supabase = get_supabase()
-        response = supabase.table("history").select("id, idea, timestamp").order("id", desc=True).execute()
+        response = supabase.table("history").select("id, idea, timestamp").eq("user_id", user_id).order("id", desc=True).execute()
         return response.data
     except Exception as e:
         logger.error(f"Failed to get history summaries from Supabase: {e}")
         return []
 
-def get_history_by_id(history_id: int):
+def get_history_by_id(history_id: int, user_id: str):
     try:
         supabase = get_supabase()
-        response = supabase.table("history").select("result").eq("id", history_id).execute()
+        response = supabase.table("history").select("result").eq("id", history_id).eq("user_id", user_id).execute()
         if response.data and len(response.data) > 0:
             return response.data[0]["result"]
         return None
@@ -53,11 +54,12 @@ def get_history_by_id(history_id: int):
         logger.error(f"Failed to get history item {history_id} from Supabase: {e}")
         return None
 
-def create_workspace(workspace_id: str, idea: str, research: dict, plan: dict):
+def create_workspace(workspace_id: str, user_id: str, idea: str, research: dict, plan: dict):
     try:
         supabase = get_supabase()
         supabase.table("workspaces").insert({
             "id": workspace_id,
+            "user_id": user_id,
             "idea": idea,
             "research_json": research,
             "plan_json": plan
@@ -65,10 +67,13 @@ def create_workspace(workspace_id: str, idea: str, research: dict, plan: dict):
     except Exception as e:
         logger.error(f"Failed to create workspace in Supabase: {e}")
 
-def get_workspace(workspace_id: str):
+def get_workspace(workspace_id: str, user_id: str = None):
     try:
         supabase = get_supabase()
-        response = supabase.table("workspaces").select("*").eq("id", workspace_id).execute()
+        query = supabase.table("workspaces").select("*").eq("id", workspace_id)
+        if user_id:
+            query = query.eq("user_id", user_id)
+        response = query.execute()
         if response.data and len(response.data) > 0:
             row = response.data[0]
             return {
@@ -82,12 +87,15 @@ def get_workspace(workspace_id: str):
         logger.error(f"Failed to get workspace {workspace_id} from Supabase: {e}")
         return None
 
-def update_workspace_research(workspace_id: str, research: dict):
+def update_workspace_research(workspace_id: str, research: dict, user_id: str = None):
     try:
         supabase = get_supabase()
-        supabase.table("workspaces").update({
+        query = supabase.table("workspaces").update({
             "research_json": research
-        }).eq("id", workspace_id).execute()
+        }).eq("id", workspace_id)
+        if user_id:
+            query = query.eq("user_id", user_id)
+        query.execute()
     except Exception as e:
         logger.error(f"Failed to update workspace research in Supabase: {e}")
         raise e

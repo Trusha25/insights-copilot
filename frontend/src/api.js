@@ -1,9 +1,21 @@
+import { supabase } from './supabaseClient';
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
+async function getHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers = { 'Content-Type': 'application/json' };
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
+  return headers;
+}
+
 export async function analyzeIdea(idea) {
+  const headers = await getHeaders();
   const response = await fetch(`${BASE_URL}/api/analyze`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ idea }),
   });
   if (!response.ok) {
@@ -14,21 +26,28 @@ export async function analyzeIdea(idea) {
 }
 
 export async function fetchHistory() {
-  const response = await fetch(`${BASE_URL}/api/history`);
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/history`, {
+    headers,
+  });
   if (!response.ok) throw new Error('Failed to fetch history');
   return await response.json();
 }
 
 export async function fetchHistoryItem(id) {
-  const response = await fetch(`${BASE_URL}/api/history/${id}`);
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/history/${id}`, {
+    headers,
+  });
   if (!response.ok) throw new Error('Failed to fetch history item');
   return await response.json();
 }
 
 export async function askMentor(payload) {
+  const headers = await getHeaders();
   const response = await fetch(`${BASE_URL}/api/mentor`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
@@ -39,9 +58,10 @@ export async function askMentor(payload) {
 }
 
 export async function refreshWorkspace(workspaceId) {
+  const headers = await getHeaders();
   const response = await fetch(`${BASE_URL}/api/workspaces/${workspaceId}/refresh`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

@@ -1,11 +1,12 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import Dict, Any
 from agents import research_agent, planner_agent, critic_agent, mentor_agent
-from db import init_db, save_history, get_all_history_summaries, get_history_by_id, create_workspace, get_workspace
+from db import init_db, save_history, get_all_history_summaries, get_history_by_id, create_workspace, get_workspace, update_workspace_research
 import os
 import uuid
 import logging
@@ -104,6 +105,21 @@ class MentorRequest(BaseModel):
     plan: dict
     question: str
 
+security = HTTPBearer()
+
+def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    token = credentials.credentials
+    try:
+        from db import get_supabase
+        supabase = get_supabase()
+        res = supabase.auth.get_user(token)
+        if not res or not res.user:
+            raise HTTPException(status_code=401, detail="Invalid token or session expired.")
+        return str(res.user.id)
+    except Exception as e:
+        logger.error(f"JWT Verification failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid authorization token.")
+
 @app.get("/api/health")
 def health_check():
     key = os.getenv("GROQ_API_KEY", "").strip()
@@ -114,7 +130,7 @@ def health_check():
     }
 
 @app.post("/api/analyze")
-async def analyze(payload: IdeaRequest):
+async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_id)):
     if not payload.idea or not payload.idea.strip():
         raise HTTPException(status_code=400, detail="The 'idea' field cannot be empty.")
     
@@ -131,7 +147,7 @@ async def analyze(payload: IdeaRequest):
     
     workspace_id = str(uuid.uuid4())
     try:
-        create_workspace(workspace_id, idea, research, plan)
+        create_workspace(workspace_id, user_id, idea, research, plan)
     except Exception as e:
         logger.error(f"Failed to create workspace: {e}")
 
@@ -143,35 +159,35 @@ async def analyze(payload: IdeaRequest):
     }
     # Passively save to history — never fail the request if this errors
     try:
-        save_history(idea, result)
+        save_history(user_id, idea, result)
     except Exception as e:
         logger.error(f"Failed to save history: {e}")
     return result
 
 @app.get("/api/workspaces/{workspace_id}/telegram-link")
-def get_telegram_link_endpoint(workspace_id: str):
-    workspace = get_workspace(workspace_id)
+def get_telegram_link_endpoint(workspace_id: str, user_id: str = Depends(get_current_user_id)):
+    workspace = get_workspace(workspace_id, user_id=user_id)
     if not workspace:
-        raise HTTPException(status_code=404, detail="Workspace not found")
+        raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
     bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "insights_copilot_bot")
     return {"deep_link": f"https://t.me/{bot_username}?start={workspace_id}"}
 
 @app.get("/api/history")
-def get_history():
-    return get_all_history_summaries()
+def get_history(user_id: str = Depends(get_current_user_id)):
+    return get_all_history_summaries(user_id)
 
 @app.get("/api/history/{history_id}")
-def get_history_item(history_id: int):
-    item = get_history_by_id(history_id)
+def get_history_item(history_id: int, user_id: str = Depends(get_current_user_id)):
+    item = get_history_by_id(history_id, user_id)
     if not item:
-        raise HTTPException(status_code=404, detail="History item not found")
+        raise HTTPException(status_code=404, detail="History item not found or unauthorized")
     return item
 
 @app.post("/api/workspaces/{workspace_id}/refresh")
-async def refresh_workspace(workspace_id: str):
-    workspace = get_workspace(workspace_id)
+async def refresh_workspace(workspace_id: str, user_id: str = Depends(get_current_user_id)):
+    workspace = get_workspace(workspace_id, user_id=user_id)
     if not workspace:
-        raise HTTPException(status_code=404, detail="Workspace not found")
+        raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
         
     old_research = workspace.get("research") or {}
     previous_fetched_at = old_research.get("fetched_at", "Unknown")
@@ -190,8 +206,7 @@ async def refresh_workspace(workspace_id: str):
         
         new_sources_combined = new_web + new_github + new_apis
         
-        from db import update_workspace_research
-        update_workspace_research(workspace_id, new_research)
+        update_workspace_research(workspace_id, new_research, user_id=user_id)
         
         return {
             "research": new_research,
@@ -204,7 +219,7 @@ async def refresh_workspace(workspace_id: str):
         raise HTTPException(status_code=500, detail="Failed to run research refresh")
 
 @app.post("/api/mentor")
-async def mentor(payload: MentorRequest):
+async def mentor(payload: MentorRequest, user_id: str = Depends(get_current_user_id)):
     if not payload.question or not payload.question.strip():
         raise HTTPException(status_code=400, detail="The 'question' field cannot be empty.")
         
