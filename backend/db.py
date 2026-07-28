@@ -98,6 +98,16 @@ def get_workspace(workspace_id: str):
         logger.error(f"Failed to get workspace {workspace_id} from Supabase: {e}")
         return None
 
+def update_workspace_research(workspace_id: str, research: dict):
+    try:
+        supabase = get_supabase()
+        supabase.table("workspaces").update({
+            "research_json": research
+        }).eq("id", workspace_id).execute()
+    except Exception as e:
+        logger.error(f"Failed to update workspace research in Supabase: {e}")
+        raise e
+
 def link_telegram(chat_id: str, workspace_id: str):
     try:
         supabase = get_supabase()

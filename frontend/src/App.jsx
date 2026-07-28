@@ -14,6 +14,8 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState("");
   const [elapsedTime, setElapsedTime] = useState("~0.0s");
   const [currentView, setCurrentView] = useState("dashboard");
+  const [newSourceUrls, setNewSourceUrls] = useState([]);
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     let interval;
@@ -39,6 +41,15 @@ export default function App() {
     } catch (error) {
       setErrorMessage(error.message || "An unexpected error occurred.");
       setStatus("error");
+    }
+  };
+
+  const handleRefreshResearch = (newResearch, newSources, newCount) => {
+    setResult((prev) => ({ ...prev, research: newResearch }));
+    setNewSourceUrls(newSources.map(s => s.url).filter(Boolean));
+    if (newCount > 0) {
+      setToastMessage(`${newCount} new source${newCount > 1 ? 's' : ''} found!`);
+      setTimeout(() => setToastMessage(""), 4000);
     }
   };
 
@@ -117,12 +128,18 @@ export default function App() {
             </div>
           )}
 
+          {toastMessage && (
+            <div className="fixed bottom-6 right-6 bg-emerald-600 text-white px-6 py-3 rounded-xl shadow-lg font-medium animate-bounce">
+              {toastMessage}
+            </div>
+          )}
+
           {(status === "loading" || status === "done") && (
             <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-6 items-start">
-              <ResearchCard status={status} research={result?.research} critique={result?.critique} />
+              <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={result?.workspace_id} onRefreshSuccess={handleRefreshResearch} />
               <ArchitectureCard status={status} plan={result?.plan} />
               <PlanCard status={status} roadmap={result?.plan?.roadmap} />
-              <ResourcesCard status={status} research={result?.research} />
+              <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} />
             </div>
           )}
         </main>

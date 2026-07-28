@@ -167,6 +167,42 @@ def get_history_item(history_id: int):
         raise HTTPException(status_code=404, detail="History item not found")
     return item
 
+@app.post("/api/workspaces/{workspace_id}/refresh")
+async def refresh_workspace(workspace_id: str):
+    workspace = get_workspace(workspace_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+        
+    old_research = workspace.get("research") or {}
+    previous_fetched_at = old_research.get("fetched_at", "Unknown")
+    
+    try:
+        new_research = await research_agent(workspace["idea"])
+        
+        # Diff sources
+        def compute_new_urls(old_list, new_list):
+            old_urls = {s.get("url") for s in old_list if s.get("url")}
+            return [s for s in new_list if s.get("url") and s.get("url") not in old_urls]
+
+        new_web = compute_new_urls(old_research.get("sources", []), new_research.get("sources", []))
+        new_github = compute_new_urls(old_research.get("github_repos", []), new_research.get("github_repos", []))
+        new_apis = compute_new_urls(old_research.get("apis_datasets", []), new_research.get("apis_datasets", []))
+        
+        new_sources_combined = new_web + new_github + new_apis
+        
+        from db import update_workspace_research
+        update_workspace_research(workspace_id, new_research)
+        
+        return {
+            "research": new_research,
+            "new_source_count": len(new_sources_combined),
+            "new_sources": new_sources_combined,
+            "previous_fetched_at": previous_fetched_at
+        }
+    except Exception as e:
+        logger.error(f"Failed to refresh workspace: {e}")
+        raise HTTPException(status_code=500, detail="Failed to run research refresh")
+
 @app.post("/api/mentor")
 async def mentor(payload: MentorRequest):
     if not payload.question or not payload.question.strip():
