@@ -13,12 +13,23 @@ export default function ResourcesCard({ status, research }) {
 
   if (!research) return null;
 
-  // Merge all web/arxiv sources (exclude github duplicates already in github_repos)
-  const webSources = (research.sources || []).filter(
-    (s) => s.source_type !== 'github'
-  );
+  // Extract web/academic sources and github repos from either legacy arrays or new schema
+  const webSources = research.sources
+    ? research.sources.filter((s) => s.source_type !== 'github')
+    : [
+        ...(research.existing_solutions || [])
+          .filter(s => s.source_type !== 'github' && s.source_url)
+          .map(s => ({ title: s.claim, url: s.source_url, source_type: s.source_type })),
+        ...(research.research_gaps || [])
+          .filter(s => s.source_url)
+          .map(s => ({ title: s.claim, url: s.source_url, source_type: s.source_type }))
+      ];
 
-  const githubRepos = research.github_repos || [];
+  const githubRepos = research.github_repos
+    ? research.github_repos
+    : (research.existing_solutions || [])
+        .filter(s => s.source_type === 'github' && s.source_url)
+        .map(s => ({ name: s.claim, url: s.source_url, why_relevant: s.claim }));
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-fit">
@@ -49,11 +60,11 @@ export default function ResourcesCard({ status, research }) {
                     </span>
                     <div className="min-w-0">
                       {src.title && (
-                        <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-700 mb-0.5 line-clamp-1">
+                        <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-700 mb-0.5 line-clamp-2">
                           {src.title}
                         </p>
                       )}
-                      <p className="text-sm text-slate-500 break-all line-clamp-1">{src.url}</p>
+                      <p className="text-xs text-slate-500 break-all line-clamp-1">{src.url}</p>
                     </div>
                   </div>
                 </a>
@@ -61,7 +72,7 @@ export default function ResourcesCard({ status, research }) {
             </div>
           ) : (
             <div className="p-4 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-400 text-sm text-center">
-              No web/academic sources returned — add a valid Tavily API key for live search results.
+              No web/academic sources returned.
             </div>
           )}
         </div>
@@ -87,8 +98,8 @@ export default function ResourcesCard({ status, research }) {
                       <p className="text-sm font-semibold text-slate-800 group-hover:text-slate-900 break-all line-clamp-1">
                         {repo.name || repo.url.replace('https://github.com/', '')}
                       </p>
-                      {repo.why_relevant && (
-                        <p className="text-sm text-slate-500 mt-0.5 line-clamp-2">{repo.why_relevant}</p>
+                      {repo.why_relevant && repo.why_relevant !== repo.name && (
+                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{repo.why_relevant}</p>
                       )}
                     </div>
                   </div>

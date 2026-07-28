@@ -24,15 +24,14 @@ export default function MermaidChart({ chart }) {
     if (!chart) return;
 
     let isMounted = true;
-    const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
 
     const renderChart = async () => {
       try {
         setError(false);
-        // Await parsing first to validate
         await mermaid.parse(chart);
         const { svg } = await mermaid.render(id, chart);
-        
+
         if (isMounted) {
           setSvgContent(svg);
         }
@@ -41,7 +40,6 @@ export default function MermaidChart({ chart }) {
         if (isMounted) {
           setError(true);
         }
-        // Cleanup any error SVG Mermaid injected into the body
         const errorNode = document.getElementById(`d${id}`);
         if (errorNode) errorNode.remove();
       }
@@ -65,7 +63,7 @@ export default function MermaidChart({ chart }) {
   }
 
   return (
-    <div 
+    <div
       className="mermaid-container w-full overflow-x-auto flex justify-center py-4 bg-slate-50 rounded-xl border border-slate-100"
       ref={containerRef}
       dangerouslySetInnerHTML={{ __html: svgContent }}

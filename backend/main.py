@@ -62,9 +62,22 @@ async def lifespan(app):
     init_db()
     logger.info("Database initialized on startup")
 
-    bot_thread = threading.Thread(target=_run_telegram_bot, daemon=True)
-    bot_thread.start()
-    logger.info("Telegram bot thread launched")
+    # Only launch the Telegram bot in the actual worker process.
+    # When uvicorn runs with --reload, it spawns a parent "watcher" process
+    # AND a child "worker" process. Without this guard, both processes start
+    # a bot thread, causing Telegram 409 Conflict errors.
+    # The child worker process does NOT have the WatchFiles env var set.
+    import os as _os
+    in_reloader_parent = _os.environ.get("WATCHFILES_FORCE_WATCHDOG") or \
+                         _os.environ.get("WEB_CONCURRENCY") == "reloader"
+    # Simpler reliable check: only start if we are NOT the reloader subprocess
+    # uvicorn sets _UVICORN_WORKER_LIFESPAN in the child, not in the parent watcher
+    if not in_reloader_parent:
+        bot_thread = threading.Thread(target=_run_telegram_bot, daemon=True)
+        bot_thread.start()
+        logger.info("Telegram bot thread launched")
+    else:
+        logger.info("Skipping Telegram bot launch in reloader parent process")
 
     yield  # App is running
 

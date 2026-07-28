@@ -1,12 +1,17 @@
 import os
 import json
 import logging
-from supabase import create_client, Client
+try:
+    from supabase import create_client, Client
+except ImportError:
+    create_client = None
+    Client = None
+
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# Fallback fake client if env vars are missing so the app doesn't crash on startup
+# Fallback fake client if env vars or library are missing so the app doesn't crash on startup
 class DummySupabase:
     def table(self, name):
         class DummyTable:
@@ -22,7 +27,10 @@ class DummySupabase:
                 return DummyRes()
         return DummyTable()
 
-def get_supabase() -> Client:
+def get_supabase():
+    if create_client is None:
+        logger.warning("Supabase package not installed. Database operations will fail silently.")
+        return DummySupabase()
     url = os.environ.get("SUPABASE_URL", "").strip()
     key = os.environ.get("SUPABASE_KEY", "").strip()
     if not url or not key:
@@ -31,8 +39,6 @@ def get_supabase() -> Client:
     return create_client(url, key)
 
 def init_db():
-    # In Supabase, initialization happens via SQL scripts run in the Supabase Dashboard.
-    # We just verify we can connect.
     url = os.environ.get("SUPABASE_URL", "").strip()
     if url:
         logger.info(f"Supabase configured pointing to {url}")
