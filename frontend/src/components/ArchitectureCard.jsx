@@ -51,6 +51,29 @@ export default function ArchitectureCard({ status, plan }) {
             <p className="text-base text-slate-700">No tech stack provided.</p>
           )}
         </div>
+
+        {plan.architecture_components && plan.architecture_components.length > 0 && (
+          <div className="pt-6 border-t border-slate-100">
+            <h4 className="font-bold text-lg text-slate-800 mb-4">Core Components & Services</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {plan.architecture_components.map((comp, idx) => (
+                <div key={idx} className="p-4 bg-slate-50/50 border border-slate-150 rounded-2xl flex flex-col gap-2">
+                  <div className="flex justify-between items-start gap-3">
+                    <span className="font-bold text-slate-800 text-base">{comp.component}</span>
+                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-100 shrink-0">
+                      {comp.technology}
+                    </span>
+                  </div>
+                  {comp.rationale && (
+                    <p className="text-sm text-slate-600 leading-relaxed mt-1">
+                      <span className="font-semibold text-slate-500">Why:</span> {comp.rationale}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

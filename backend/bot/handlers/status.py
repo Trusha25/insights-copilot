@@ -34,8 +34,17 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     milestone = roadmap[current_index]
     milestone_title = milestone.get("milestone", f"Milestone {current_index + 1}")
     tasks = milestone.get("tasks", [])
+    formatted_tasks = []
+    for t in tasks:
+        if isinstance(t, dict):
+            task_str = f"*{t.get('title')}*: {t.get('description')}"
+            if t.get('rationale'):
+                task_str += f"\n    _Rationale: {t.get('rationale')}_"
+            formatted_tasks.append(task_str)
+        else:
+            formatted_tasks.append(str(t))
     
-    tasks_text = "\n".join([f"• {t}" for t in tasks]) if tasks else "No specific tasks listed."
+    tasks_text = "\n".join([f"• {t}" for t in formatted_tasks]) if formatted_tasks else "No specific tasks listed."
     remaining = len(roadmap) - current_index - 1
 
     msg = (

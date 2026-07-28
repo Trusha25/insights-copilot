@@ -45,10 +45,29 @@ export default function PlanCard({ status, roadmap }) {
                   </span>
                 </div>
                 {item.tasks && item.tasks.length > 0 ? (
-                  <ul className="list-disc pl-5 text-base text-slate-700 space-y-2">
-                    {item.tasks.map((task, idx) => (
-                      <li key={idx}>{task}</li>
-                    ))}
+                  <ul className="list-disc pl-5 text-base text-slate-700 space-y-3">
+                    {item.tasks.map((task, idx) => {
+                      if (typeof task === 'string') {
+                        return <li key={idx}>{task}</li>;
+                      }
+                      return (
+                        <li key={idx} className="space-y-1 list-none -ml-4">
+                          <div className="flex items-start gap-2">
+                            <span className="text-indigo-600 font-bold mt-1 shrink-0">•</span>
+                            <div>
+                              <span className="font-bold text-slate-800">{task.title}</span>
+                              {task.description && <span className="text-slate-600"> — {task.description}</span>}
+                              {task.rationale && (
+                                <div className="text-sm text-indigo-600 bg-indigo-50/40 px-2.5 py-1 rounded-xl border border-indigo-100/40 w-fit mt-1.5 font-medium">
+                                  <span className="font-semibold text-indigo-700">Rationale: </span>
+                                  {task.rationale}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <ul className="list-disc pl-5 text-base text-slate-700 space-y-2">

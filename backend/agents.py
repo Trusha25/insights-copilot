@@ -373,7 +373,9 @@ async def planner_agent(idea: str, research: dict) -> dict:
     logger.info("Starting planner_agent")
     fallback = {
         "architecture": "Unable to generate — please retry.",
+        "architecture_mermaid": "graph TD\n  A[Frontend] --> B[Backend]",
         "tech_stack": [],
+        "architecture_components": [],
         "roadmap": [],
         "timeline": "Unable to generate — please retry.",
         "documentation": {
@@ -383,33 +385,135 @@ async def planner_agent(idea: str, research: dict) -> dict:
     }
     try:
         system_prompt = (
-            "You are an expert Technical Project Planner. "
-            "Ground EVERY recommendation in the provided research dict (existing solutions, gaps, sources). "
-            "No generic advice untethered from what was found. "
-            "Constraints:\n"
-            "- Actionable: every roadmap step must be something a team can literally start doing.\n"
-            "- Verifiable: tech stack and libraries must be real, currently-existing tools — no invented package names.\n"
-            "- Scalable: architecture must note what changes beyond hackathon-prototype scale.\n"
-            "- Accurate: prefer a conservative general claim over a fabricated specific one.\n"
-            "Keep string fields concise (< 50 words) EXCEPT documentation.sections[].content."
+            "You are a Senior Principal Software Architect and Technical Planner.\n"
+            "Your job is to translate a startup idea and its associated domain research into a comprehensive, "
+            "production-grade technical plan. Every output you generate must be unique, highly specific to the "
+            "technical domain of the idea, and explicitly grounded in the provided research data (APIs, existing solutions, "
+            "academic papers, datasets).\n\n"
+            "CRITICAL CONSTRAINTS & REQUIREMENTS:\n"
+            "1. NO GENERIC ROADMAPS: Completely avoid generic project phases like 'UI Development', 'Testing', 'Backend setup', "
+            "or 'Core Features'. Every milestone and task must represent concrete engineering tasks specific to this system.\n"
+            "2. CONCRETE IMPLEMENTATION ACTIONS: Tasks must describe technical actions (e.g., 'Implement spaced repetition scheduling "
+            "using the SM-2 algorithm', 'Configure FAISS index with inner-product similarity for vector matching').\n"
+            "3. STYLED, LAYERED MERMAID DIAGRAMS:\n"
+            "   - Group components using clean Mermaid subgraphs (e.g. Client Layer, Backend Services, AI / ML Layer, Data Layer, External APIs).\n"
+            "   - Every diagram must contain between 8 to 14 nodes, representing detailed architecture components.\n"
+            "   - Avoid plain arrows. Every edge connector MUST have a clear data flow label (e.g., '-->|raw query|' or '-->|access token|').\n"
+            "   - Assign custom color definitions matching the app's clean palette using classDef. Always define classes for 'client', "
+            "     'service', 'ai', 'data', and 'ext', and assign them using `:::className` syntax.\n"
+            "   - Ensure all subgraphs use double-quoted labels (e.g., `subgraph Client_Layer[\"Client Layer\"]`) to prevent parsing syntax errors.\n"
+            "4. SYSTEMATIC GROUNDING: Recommending libraries or databases must include domain-specific technical justifications. "
+            "   Cross-reference findings from the research phase (e.g., open source libraries, APIs, datasets) in the plan.\n"
         )
+
+        few_shot_examples = """
+### FEW-SHOT EXAMPLE 1 (AI Study Buddy):
+Idea: "AI Study Buddy with Spaced Repetition"
+Plan JSON:
+{
+  "architecture": "A multi-layered design separating client interfaces, caching layers, and core algorithms. The system splits concept extraction from the core spaced-repetition logic, utilizing an in-memory Redis session store to ensure minimal DB latency.",
+  "tech_stack": [
+    "React (Vite) - Highly responsive SPA client for card reviews",
+    "FastAPI - Async gateway enabling high concurrency request routing",
+    "spaCy - Natural Language Processing library for offline term extraction",
+    "PostgreSQL - Relational database for structured Leitner and user scheduling logs",
+    "Redis - Cache for active review sessions and session tokens"
+  ],
+  "architecture_components": [
+    {
+      "component": "Leitner-based Spaced Repetition Scheduler",
+      "technology": "Custom Python Core Engine",
+      "rationale": "Required to dynamically calculate personalized card recall intervals using the SM-2 algorithm based on student response values."
+    },
+    {
+      "component": "Concept Extraction Pipeline",
+      "technology": "spaCy Core NLP",
+      "rationale": "Parses textbooks or notes uploaded by users to extract keywords and definitions without requiring expensive external LLM API queries."
+    },
+    {
+      "component": "Relational Study Store",
+      "technology": "PostgreSQL",
+      "rationale": "Ensures transactional data safety when updating complex nested study logs and Leitner card intervals."
+    }
+  ],
+  "roadmap": [
+    {
+      "milestone": "Implement Leitner-Based Flashcard Scheduling Engine",
+      "duration": "5 days",
+      "tasks": [
+        {
+          "title": "Define PostgreSQL Scheduling Schemas",
+          "description": "Establish tables for cards, user progress tracks, and review histories with indexes on user_id.",
+          "rationale": "Essential to record study performance metrics and card retrieval logs safely."
+        },
+        {
+          "title": "Build SM-2 Recall Calculations",
+          "description": "Code the algorithm calculating next interval, ease factor, and repetition count from review ratings (0-5).",
+          "rationale": "Powers the core customization feature, adapting study loops to student memory decay curves."
+        }
+      ]
+    }
+  ],
+  "architecture_mermaid": "graph TD\\n  classDef client fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;\\n  classDef service fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#3730a3;\\n  classDef ai fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8;\\n  classDef data fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#065f46;\\n  classDef ext fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;\\n\\n  subgraph Client_Layer[\\\"Client Layer\\\"]\\n    A[React SPA Client]:::client\\n  end\\n\\n  subgraph Backend_Services[\\\"Backend Services\\\"]\\n    B[FastAPI Router]:::service\\n    C[SM-2 Scheduler Core]:::service\\n  end\\n\\n  subgraph AI_Layer[\\\"AI & ML Core\\\"]\\n    D[spaCy Tag Extractor]:::ai\\n  end\\n\\n  subgraph Data_Layer[\\\"Data Stores\\\"]\\n    E[PostgreSQL Database]:::data\\n    F[Redis Session Cache]:::data\\n  end\\n\\n  A -->|HTTPS Requests| B\\n  B -->|Validate Session| F\\n  B -->|Retrieve Cards| E\\n  B -->|Parse text uploads| D\\n  B -->|Compute intervals| C\\n  C -->|Write new review times| E",
+  "timeline": "6 weeks total development time with a 2-engineer engineering team.",
+  "documentation": {
+    "overview": "Technical execution plan for Study Buddy concept mapping and flashcard scheduler.",
+    "sections": [
+      {
+        "heading": "Database Scaling and Cache Retention",
+        "content": "To prevent high database load, card scheduling parameters are buffered in Redis active queues and flushed asynchronously to PostgreSQL every 5 minutes."
+      }
+    ]
+  }
+}
+"""
+
         user_prompt = f"""
+{few_shot_examples}
+
+---
+
 Idea: "{idea}"
 Research: {json.dumps(research)}
 
-Generate JSON with EXACTLY 5 milestone objects in the roadmap array, each having at least 4 tasks:
+Generate a detailed, technical plan for the above Idea, heavily utilizing details from the Research data.
+Your output MUST be a valid JSON object matching the schema below. Do not wrap in markdown or add text outside the JSON.
+
+JSON Schema:
 {{
-  "architecture": "string, 3-5 sentences: components, connections, one line on scalability",
-  "architecture_mermaid": "string, a STRICTLY VALID Mermaid.js flowchart (e.g., 'graph TD\\n  A[Frontend] -->|API| B[Backend]') representing the system architecture. Use literal \\n for newlines. Do not use invalid arrow syntax like '-->|text|>'. Keep it simple.",
-  "tech_stack": ["string — specific real tools only"],
-  "roadmap": [
-    {{ "milestone": "string", "tasks": ["string, concrete action 1", "string, concrete action 2", "string, concrete action 3", "string, concrete action 4", "string, concrete action 5"], "duration": "string, e.g. '2 days'" }}
+  "architecture": "string, 3-5 sentences analyzing components, integrations, and performance aspects",
+  "architecture_mermaid": "string, a STRICTLY VALID, styled Mermaid.js flowchart. Use layered subgraphs, labeled arrows, classDef styles (client, service, ai, data, ext), and escaped newlines (\\\\n) for formatting.",
+  "tech_stack": [
+    "string - e.g., 'React (Vite) - chosen for low overhead bundle size and rapid UI rendering'"
   ],
-  "timeline": "string, one sentence: total estimate + team size assumption",
+  "architecture_components": [
+    {{
+      "component": "string - component name",
+      "technology": "string - technology used",
+      "rationale": "string - idea-specific reason explaining why it is required and how it contributes"
+    }}
+  ],
+  "roadmap": [
+    {{
+      "milestone": "string - non-generic milestone name representing the engineering challenge",
+      "duration": "string - e.g. '4 days'",
+      "tasks": [
+        {{
+          "title": "string - concrete task title",
+          "description": "string - technical action detail",
+          "rationale": "string - why this task exists and its contribution to the specific project"
+        }}
+      ]
+    }}
+  ],
+  "timeline": "string, one-sentence timeline estimation",
   "documentation": {{
-    "overview": "string, 2-3 sentences",
+    "overview": "string, 2-3 sentences overview",
     "sections": [
-      {{ "heading": "string", "content": "string, 2-4 full sentences of real content" }}
+      {{
+        "heading": "string",
+        "content": "string, 2-4 sentences outlining design rationale"
+      }}
     ]
   }}
 }}
