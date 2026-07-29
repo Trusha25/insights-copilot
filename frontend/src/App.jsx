@@ -19,6 +19,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState("dashboard");
   const [newSourceUrls, setNewSourceUrls] = useState([]);
   const [toastMessage, setToastMessage] = useState("");
+  const [loadedChats, setLoadedChats] = useState({});
 
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -89,6 +90,9 @@ export default function App() {
       const data = await analyzeIdea(idea);
       setResult(data);
       setStatus("done");
+      if (data?.workspace_id) {
+        setLoadedChats(prev => ({ ...prev, [data.workspace_id]: data }));
+      }
     } catch (error) {
       setErrorMessage(error.message || "An unexpected error occurred.");
       setStatus("error");
@@ -96,7 +100,13 @@ export default function App() {
   };
 
   const handleRefreshResearch = (newResearch, newSources, newCount) => {
-    setResult((prev) => ({ ...prev, research: newResearch }));
+    setResult((prev) => {
+      const updated = { ...prev, research: newResearch };
+      if (prev?.workspace_id) {
+        setLoadedChats(c => ({ ...c, [prev.workspace_id]: updated }));
+      }
+      return updated;
+    });
     setNewSourceUrls(newSources.map(s => s.url).filter(Boolean));
     if (newCount > 0) {
       setToastMessage(`${newCount} new source${newCount > 1 ? 's' : ''} found!`);
@@ -105,12 +115,15 @@ export default function App() {
   };
 
   // Called when user clicks a history item — restore that analysis to dashboard
-  const handleHistorySelect = (savedIdea, savedResult) => {
+  const handleHistorySelect = (savedIdea, savedResult, wsId) => {
     setIdea(savedIdea);
     setResult(savedResult);
     setStatus("done");
     setElapsedTime("(restored)");
     setCurrentView("dashboard");
+    if (wsId) {
+      setLoadedChats(prev => ({ ...prev, [wsId]: savedResult }));
+    }
   };
 
   const handleToggleSaveActive = async () => {
@@ -118,11 +131,32 @@ export default function App() {
     try {
       const { is_saved } = await toggleSaveWorkspace(result.workspace_id);
       setResult(prev => ({ ...prev, is_saved }));
+      setLoadedChats(prev => {
+        if (prev[result.workspace_id]) {
+          return {
+            ...prev,
+            [result.workspace_id]: { ...prev[result.workspace_id], is_saved }
+          };
+        }
+        return prev;
+      });
       setToastMessage(is_saved ? "Workspace saved to favorites!" : "Workspace removed from favorites.");
       setTimeout(() => setToastMessage(""), 3000);
     } catch (e) {
       console.error("Failed to toggle save state", e);
     }
+  };
+
+  const handleToggleSaveCache = (wsId, isSaved) => {
+    setLoadedChats(prev => {
+      if (prev[wsId]) {
+        return {
+          ...prev,
+          [wsId]: { ...prev[wsId], is_saved: isSaved }
+        };
+      }
+      return prev;
+    });
   };
 
   const handleNavigate = (view) => {
@@ -134,9 +168,18 @@ export default function App() {
       <Sidebar currentView={currentView} onNavigate={handleNavigate} />
 
       {currentView === 'history' ? (
-        <HistoryView onSelectItem={handleHistorySelect} />
+        <HistoryView 
+          onSelectItem={handleHistorySelect} 
+          loadedChats={loadedChats} 
+          onToggleSaveCache={handleToggleSaveCache} 
+        />
       ) : currentView === 'saved' ? (
-        <HistoryView onSelectItem={handleHistorySelect} onlySaved={true} />
+        <HistoryView 
+          onSelectItem={handleHistorySelect} 
+          loadedChats={loadedChats} 
+          onToggleSaveCache={handleToggleSaveCache} 
+          onlySaved={true} 
+        />
       ) : currentView === 'settings' ? (
         <SettingsView />
       ) : (

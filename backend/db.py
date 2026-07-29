@@ -6,7 +6,6 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# Fallback fake client if env vars are missing so the app doesn't crash on startup
 def get_supabase() -> Client:
     url = os.environ.get("SUPABASE_URL", "").strip()
     key = os.environ.get("SUPABASE_KEY", "").strip()
@@ -15,67 +14,98 @@ def get_supabase() -> Client:
     return create_client(url, key)
 
 def init_db():
-    # In Supabase, initialization happens via SQL scripts run in the Supabase Dashboard.
-    # We just verify we can connect.
     url = os.environ.get("SUPABASE_URL", "").strip()
     key = os.environ.get("SUPABASE_KEY", "").strip()
     if not url or not key:
         raise RuntimeError("SUPABASE_URL or SUPABASE_KEY environment variables are missing. Startup halted.")
     logger.info(f"Supabase configured pointing to {url}")
 
-def save_history(user_id: str, idea: str, result: dict):
+def save_history(idea: str, result: dict, user_id: str = None):
     try:
         supabase = get_supabase()
-        supabase.table("history").insert({
-            "user_id": user_id,
+        payload = {
             "idea": idea,
             "result": result
-        }).execute()
+        }
+        if user_id:
+            payload["user_id"] = user_id
+        supabase.table("history").insert(payload).execute()
     except Exception as e:
         logger.error(f"Failed to save history to Supabase: {e}")
 
-def get_all_history_summaries(user_id: str):
+def get_all_history_summaries(user_id: str = None, saved_only: bool = False):
     try:
         supabase = get_supabase()
-        response = supabase.table("history").select("id, idea, timestamp, result").eq("user_id", user_id).order("id", desc=True).execute()
-        saved_ids = set(get_saved_workspace_ids(user_id))
-        formatted = []
-        for row in response.data:
-            result_dict = row.get("result") or {}
-            ws_id = result_dict.get("workspace_id")
-            formatted.append({
-                "id": row.get("id"),
-                "idea": row.get("idea"),
-                "timestamp": row.get("timestamp"),
+        
+        # 1. Fetch saved workspace IDs if filtering is needed or to map is_saved state
+        saved_query = supabase.table("workspaces").select("id")
+        if user_id:
+            saved_query = saved_query.eq("user_id", user_id)
+        saved_query = saved_query.eq("is_saved", True)
+        saved_res = saved_query.execute()
+        saved_ids = {row["id"] for row in saved_res.data} if saved_res.data else set()
+
+        # 2. Query history items
+        query = supabase.table("history").select("id, idea, timestamp, workspace_id:result->workspace_id")
+        if user_id:
+            query = query.eq("user_id", user_id)
+            
+        if saved_only:
+            if not saved_ids:
+                return []
+            query = query.in_("result->>workspace_id", list(saved_ids))
+            
+        query = query.order("id", desc=True)
+        response = query.execute()
+        
+        result_data = []
+        for row in (response.data or []):
+            ws_id = row.get("workspace_id")
+            result_data.append({
+                "id": row["id"],
+                "idea": row["idea"],
+                "timestamp": row["timestamp"],
                 "workspace_id": ws_id,
                 "is_saved": ws_id in saved_ids if ws_id else False
             })
-        return formatted
+        return result_data
     except Exception as e:
         logger.error(f"Failed to get history summaries from Supabase: {e}")
         return []
 
-def get_history_by_id(history_id: int, user_id: str):
+def get_history_by_id(history_id: int, user_id: str = None):
     try:
         supabase = get_supabase()
-        response = supabase.table("history").select("result").eq("id", history_id).eq("user_id", user_id).execute()
+        query = supabase.table("history").select("result")
+        if user_id:
+            query = query.eq("user_id", user_id)
+        response = query.eq("id", history_id).execute()
         if response.data and len(response.data) > 0:
-            return response.data[0]["result"]
+            result_payload = response.data[0]["result"]
+            ws_id = result_payload.get("workspace_id")
+            if ws_id:
+                ws_res = supabase.table("workspaces").select("is_saved").eq("id", ws_id).execute()
+                is_saved = ws_res.data[0]["is_saved"] if ws_res.data else False
+                result_payload["is_saved"] = is_saved
+            return result_payload
         return None
     except Exception as e:
         logger.error(f"Failed to get history item {history_id} from Supabase: {e}")
         return None
 
-def create_workspace(workspace_id: str, user_id: str, idea: str, research: dict, plan: dict):
+def create_workspace(workspace_id: str, idea: str, research: dict, plan: dict, user_id: str = None):
     try:
         supabase = get_supabase()
-        supabase.table("workspaces").insert({
+        payload = {
             "id": workspace_id,
-            "user_id": user_id,
             "idea": idea,
             "research_json": research,
-            "plan_json": plan
-        }).execute()
+            "plan_json": plan,
+            "is_saved": False
+        }
+        if user_id:
+            payload["user_id"] = user_id
+        supabase.table("workspaces").insert(payload).execute()
     except Exception as e:
         logger.error(f"Failed to create workspace in Supabase: {e}")
 
@@ -92,7 +122,8 @@ def get_workspace(workspace_id: str, user_id: str = None):
                 "id": row["id"],
                 "idea": row["idea"],
                 "research": row["research_json"],
-                "plan": row["plan_json"]
+                "plan": row["plan_json"],
+                "is_saved": row.get("is_saved", False)
             }
         return None
     except Exception as e:
@@ -110,6 +141,29 @@ def update_workspace_research(workspace_id: str, research: dict, user_id: str = 
         query.execute()
     except Exception as e:
         logger.error(f"Failed to update workspace research in Supabase: {e}")
+        raise e
+
+def toggle_save_workspace(workspace_id: str, user_id: str = None):
+    try:
+        supabase = get_supabase()
+        query = supabase.table("workspaces").select("is_saved")
+        if user_id:
+            query = query.eq("user_id", user_id)
+        response = query.eq("id", workspace_id).execute()
+        
+        if not response.data:
+            raise ValueError(f"Workspace {workspace_id} not found or not owned by user.")
+            
+        current_saved = response.data[0].get("is_saved", False)
+        new_saved = not current_saved
+        
+        supabase.table("workspaces").update({
+            "is_saved": new_saved
+        }).eq("id", workspace_id).execute()
+        
+        return {"workspace_id": workspace_id, "is_saved": new_saved}
+    except Exception as e:
+        logger.error(f"Failed to toggle save for workspace {workspace_id}: {e}")
         raise e
 
 def link_telegram(chat_id: str, workspace_id: str):
@@ -164,48 +218,6 @@ def update_last_reminder(chat_id: str):
     except Exception as e:
         logger.error(f"Failed to update last_reminder_at for {chat_id} in Supabase: {e}")
 
-def get_saved_workspace_ids(user_id: str) -> list:
-    try:
-        supabase = get_supabase()
-        response = supabase.table("workspaces").select("id").eq("user_id", user_id).eq("is_saved", True).execute()
-        return [row["id"] for row in response.data] if response.data else []
-    except Exception as e:
-        logger.error(f"Failed to get saved workspace IDs: {e}")
-        return []
-
-def toggle_workspace_saved(workspace_id: str, user_id: str):
-    try:
-        supabase = get_supabase()
-        response = supabase.table("workspaces").select("is_saved").eq("id", workspace_id).eq("user_id", user_id).execute()
-        if not response.data:
-            return None
-        current_state = response.data[0].get("is_saved", False)
-        new_state = not current_state
-        
-        update_res = supabase.table("workspaces").update({"is_saved": new_state}).eq("id", workspace_id).eq("user_id", user_id).execute()
-        return update_res.data[0] if update_res.data else None
-    except Exception as e:
-        logger.error(f"Failed to toggle workspace saved: {e}")
-        return None
-
-def get_saved_workspaces(user_id: str) -> list:
-    try:
-        supabase = get_supabase()
-        response = supabase.table("workspaces").select("id, idea, created_at").eq("user_id", user_id).eq("is_saved", True).order("created_at", desc=True).execute()
-        formatted = []
-        for row in response.data:
-            formatted.append({
-                "id": row["id"],
-                "idea": row["idea"],
-                "timestamp": row["created_at"],
-                "workspace_id": row["id"],
-                "is_saved": True
-            })
-        return formatted
-    except Exception as e:
-        logger.error(f"Failed to get saved workspaces: {e}")
-        return []
-
 def get_user_settings(user_id: str) -> dict:
     try:
         supabase = get_supabase()
@@ -225,7 +237,7 @@ def update_user_settings(user_id: str, theme: str) -> dict:
         if theme not in ["light", "dark"]:
             raise ValueError("Theme must be 'light' or 'dark'")
         supabase = get_supabase()
-        response = supabase.table("user_settings").upsert({
+        supabase.table("user_settings").upsert({
             "user_id": user_id,
             "theme": theme,
             "updated_at": datetime.utcnow().isoformat() + "Z"

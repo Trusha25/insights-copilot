@@ -5,8 +5,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import Dict, Any
+import httpx
 from agents import research_agent, planner_agent, critic_agent, mentor_agent
-from db import init_db, save_history, get_all_history_summaries, get_history_by_id, create_workspace, get_workspace, update_workspace_research, get_saved_workspace_ids, toggle_workspace_saved, get_saved_workspaces, get_user_settings, update_user_settings
+from db import (
+    init_db, save_history, get_all_history_summaries, get_history_by_id, 
+    create_workspace, get_workspace, update_workspace_research, 
+    toggle_save_workspace, get_user_settings, update_user_settings
+)
 import os
 import uuid
 import logging
@@ -150,7 +155,7 @@ async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_
     
     workspace_id = str(uuid.uuid4())
     try:
-        create_workspace(workspace_id, user_id, idea, research, plan)
+        create_workspace(workspace_id=workspace_id, idea=idea, research=research, plan=plan, user_id=user_id)
     except Exception as e:
         logger.error(f"Failed to create workspace: {e}")
 
@@ -162,7 +167,7 @@ async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_
     }
     # Passively save to history — never fail the request if this errors
     try:
-        save_history(user_id, idea, result)
+        save_history(idea=idea, result=result, user_id=user_id)
     except Exception as e:
         logger.error(f"Failed to save history: {e}")
     return result
@@ -177,9 +182,7 @@ def get_telegram_link_endpoint(workspace_id: str, user_id: str = Depends(get_cur
 
 @app.get("/api/history")
 def get_history(saved: bool = False, user_id: str = Depends(get_current_user_id)):
-    if saved:
-        return get_saved_workspaces(user_id)
-    return get_all_history_summaries(user_id)
+    return get_all_history_summaries(user_id=user_id, saved_only=saved)
 
 @app.get("/api/history/{history_id}")
 def get_history_item(history_id: str, user_id: str = Depends(get_current_user_id)):
@@ -190,22 +193,26 @@ def get_history_item(history_id: str, user_id: str = Depends(get_current_user_id
         return item
     else:
         # It's a workspace UUID
-        workspace = get_workspace(history_id, user_id=user_id)
+        workspace = get_workspace(workspace_id=history_id, user_id=user_id)
         if not workspace:
             raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
         return {
             "workspace_id": workspace["id"],
-            "research": workspace["research_json"],
-            "plan": workspace["plan_json"],
+            "research": workspace["research"],
+            "plan": workspace["plan"],
+            "is_saved": workspace.get("is_saved", False),
             "critique": {}
         }
 
 @app.patch("/api/workspaces/{workspace_id}/save")
 def toggle_save(workspace_id: str, user_id: str = Depends(get_current_user_id)):
-    res = toggle_workspace_saved(workspace_id, user_id)
-    if not res:
-        raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
-    return {"workspace_id": workspace_id, "is_saved": res.get("is_saved", False)}
+    try:
+        res = toggle_save_workspace(workspace_id=workspace_id, user_id=user_id)
+        return {"workspace_id": workspace_id, "is_saved": res.get("is_saved", False)}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/settings")
 def get_settings(user_id: str = Depends(get_current_user_id)):

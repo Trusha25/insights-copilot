@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchHistory, fetchHistoryItem, toggleSaveWorkspace } from '../api';
 
-export default function HistoryView({ onSelectItem, onlySaved = false }) {
+export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSaveCache, onlySaved = false }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingId, setLoadingId] = useState(null);
@@ -21,10 +21,18 @@ export default function HistoryView({ onSelectItem, onlySaved = false }) {
   }, [onlySaved]);
 
   const handleClick = async (item) => {
+    if (loadingId !== null) return;
+    const wsId = item.workspace_id;
+    if (wsId && loadedChats[wsId]) {
+      // Return cached chat data instantly with no network request
+      onSelectItem(item.idea, loadedChats[wsId]);
+      return;
+    }
+
     setLoadingId(item.id);
     try {
       const full = await fetchHistoryItem(item.id);
-      onSelectItem(item.idea, full);
+      onSelectItem(item.idea, full, wsId);
     } catch (e) {
       console.error('Failed to load history item', e);
     } finally {
@@ -34,7 +42,7 @@ export default function HistoryView({ onSelectItem, onlySaved = false }) {
 
   const handleToggleSave = async (item, e) => {
     e.stopPropagation();
-    const wsId = item.workspace_id || item.id;
+    const wsId = item.workspace_id;
     if (!wsId) return;
     try {
       const { is_saved } = await toggleSaveWorkspace(wsId);
@@ -44,6 +52,9 @@ export default function HistoryView({ onSelectItem, onlySaved = false }) {
         }
         return prev.map(x => x.id === item.id ? { ...x, is_saved } : x);
       });
+      if (onToggleSaveCache) {
+        onToggleSaveCache(wsId, is_saved);
+      }
     } catch (err) {
       console.error('Failed to toggle save state', err);
     }
@@ -91,11 +102,10 @@ export default function HistoryView({ onSelectItem, onlySaved = false }) {
       ) : (
         <div className="space-y-4 max-w-3xl">
           {history.map((item, idx) => (
-            <button
+            <div
               key={item.id}
               onClick={() => handleClick(item)}
-              disabled={loadingId === item.id}
-              className="w-full text-left bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-md rounded-2xl p-5 transition-all group flex items-center justify-between gap-4"
+              className="w-full text-left bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-md rounded-2xl p-5 transition-all group flex items-center justify-between gap-4 cursor-pointer"
             >
               <div className="flex items-center gap-4 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-base shrink-0">
@@ -130,7 +140,7 @@ export default function HistoryView({ onSelectItem, onlySaved = false }) {
                   </svg>
                 )}
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}
