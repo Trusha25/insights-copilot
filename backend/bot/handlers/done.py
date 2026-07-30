@@ -39,7 +39,17 @@ async def done_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         next_milestone = roadmap[new_index]
         title = next_milestone.get("milestone", f"Milestone {new_index + 1}")
         tasks = next_milestone.get("tasks", [])
-        tasks_text = "\n".join([f"• {t}" for t in tasks]) if tasks else "No specific tasks."
+        formatted_tasks = []
+        for t in tasks:
+            if isinstance(t, dict):
+                task_str = f"*{t.get('title')}*: {t.get('description')}"
+                if t.get('rationale'):
+                    task_str += f"\n    _Rationale: {t.get('rationale')}_"
+                formatted_tasks.append(task_str)
+            else:
+                formatted_tasks.append(str(t))
+        
+        tasks_text = "\n".join([f"• {t}" for t in formatted_tasks]) if formatted_tasks else "No specific tasks."
 
         msg = (
             f"✅ *Milestone complete!* Awesome work.\n\n"

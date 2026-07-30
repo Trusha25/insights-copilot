@@ -5,7 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from db import get_telegram_link, get_workspace
+from db import get_telegram_link, get_workspace, save_mentor_chat
 
 async def question_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -18,22 +18,22 @@ async def question_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text="Connect your project first — open your dashboard and tap 'Connect Telegram'."
         )
         return
-
+ 
     workspace = get_workspace(link["workspace_id"])
     if not workspace:
         await context.bot.send_message(chat_id=chat_id, text="Error: Workspace not found.")
         return
-
+ 
     # Inform user we are thinking
     processing_msg = await context.bot.send_message(chat_id=chat_id, text="🤔 Let me think about that...")
-
+ 
     payload = {
         "idea": workspace["idea"],
         "research": workspace["research"],
         "plan": workspace["plan"],
         "question": text
     }
-
+ 
     try:
         from agents import mentor_agent
         
@@ -48,12 +48,23 @@ async def question_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         answer = data.get("answer", "I couldn't generate an answer.")
         resources = data.get("learning_resources", [])
         
+        # Persist bot exchange to database
+        try:
+            save_mentor_chat(
+                workspace_id=link["workspace_id"],
+                question=text,
+                answer=answer,
+                user_id=workspace.get("user_id")
+            )
+        except Exception as db_err:
+            logger.error(f"Failed to save bot mentor chat to db: {db_err}")
+
         final_msg = answer
         if resources:
             final_msg += "\n\n*Helpful Resources:*\n"
             for res in resources:
                 final_msg += f"• [{res.get('title', 'Link')}]({res.get('url', '')})\n"
-
+ 
         await context.bot.edit_message_text(
             chat_id=chat_id,
             message_id=processing_msg.message_id,

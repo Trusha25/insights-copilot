@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { askMentor, refreshWorkspace } from '../api';
 
-function ExpandableListItem({ children, textToQuery, idea, research, plan }) {
+function ExpandableListItem({ children, textToQuery, idea, research, plan, workspaceId }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [mentorResponse, setMentorResponse] = useState(null);
@@ -19,6 +19,7 @@ function ExpandableListItem({ children, textToQuery, idea, research, plan }) {
           idea: idea,
           research: research,
           plan: plan,
+          workspace_id: workspaceId,
           question: `Explain in more detail why this is a factor for this specific idea, in plain language a beginner could understand: "${textToQuery}"`
         });
         setMentorResponse(res);
@@ -168,7 +169,7 @@ export default function ResearchCard({ status, research, critique, idea, plan, w
                 <ExpandableListItem 
                   key={idx} 
                   textToQuery={`${sol.name}: ${sol.description}`}
-                  idea={idea} research={research} plan={plan}
+                  idea={idea} research={research} plan={plan} workspaceId={workspaceId}
                 >
                   <div className="text-base text-slate-700">
                     <span className="font-bold">{sol.name}</span>: {sol.description}
@@ -197,7 +198,7 @@ export default function ResearchCard({ status, research, critique, idea, plan, w
                 <ExpandableListItem 
                   key={idx} 
                   textToQuery={gapObj.gap}
-                  idea={idea} research={research} plan={plan}
+                  idea={idea} research={research} plan={plan} workspaceId={workspaceId}
                 >
                   <div className="text-base text-slate-700">{gapObj.gap}</div>
                 </ExpandableListItem>
@@ -235,7 +236,7 @@ export default function ResearchCard({ status, research, critique, idea, plan, w
                 <ExpandableListItem 
                   key={idx} 
                   textToQuery={claim}
-                  idea={idea} research={research} plan={plan}
+                  idea={idea} research={research} plan={plan} workspaceId={workspaceId}
                 >
                   <div className="text-sm text-amber-800">{claim}</div>
                 </ExpandableListItem>
