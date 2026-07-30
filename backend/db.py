@@ -93,13 +93,17 @@ def get_history_by_id(history_id: int, user_id: str = None):
         logger.error(f"Failed to get history item {history_id} from Supabase: {e}")
         return None
 
-def create_workspace(workspace_id: str, idea: str, research: dict, plan: dict, user_id: str = None):
+def create_workspace(workspace_id: str, idea: str, research: dict, plan: dict, user_id: str = None, critique: dict = None):
     try:
         supabase = get_supabase()
+        research_data = dict(research) if research else {}
+        if critique is not None:
+            research_data["_critique"] = critique
+            
         payload = {
             "id": workspace_id,
             "idea": idea,
-            "research_json": research,
+            "research_json": research_data,
             "plan_json": plan,
             "is_saved": False
         }
@@ -118,23 +122,64 @@ def get_workspace(workspace_id: str, user_id: str = None):
         response = query.execute()
         if response.data and len(response.data) > 0:
             row = response.data[0]
+            research = dict(row["research_json"] or {})
+            critique = research.pop("_critique", {})
             return {
                 "id": row["id"],
                 "idea": row["idea"],
-                "research": row["research_json"],
+                "research": research,
                 "plan": row["plan_json"],
-                "is_saved": row.get("is_saved", False)
+                "is_saved": row.get("is_saved", False),
+                "critique": critique
             }
         return None
     except Exception as e:
         logger.error(f"Failed to get workspace {workspace_id} from Supabase: {e}")
         return None
 
+def get_workspace_by_idea(idea: str, user_id: str):
+    try:
+        supabase = get_supabase()
+        query = supabase.table("workspaces").select("*")
+        if user_id:
+            query = query.eq("user_id", user_id)
+        res = query.execute()
+        if res.data:
+            target = idea.strip().lower()
+            for row in res.data:
+                if row["idea"].strip().lower() == target:
+                    research = dict(row["research_json"] or {})
+                    critique = research.pop("_critique", {})
+                    return {
+                        "id": row["id"],
+                        "idea": row["idea"],
+                        "research": research,
+                        "plan": row["plan_json"],
+                        "is_saved": row.get("is_saved", False),
+                        "critique": critique
+                    }
+        return None
+    except Exception as e:
+        logger.error(f"Failed to find workspace by idea '{idea}': {e}")
+        return None
+
 def update_workspace_research(workspace_id: str, research: dict, user_id: str = None):
     try:
         supabase = get_supabase()
+        # Retrieve existing workspace to preserve critique data
+        query = supabase.table("workspaces").select("research_json").eq("id", workspace_id)
+        if user_id:
+            query = query.eq("user_id", user_id)
+        res = query.execute()
+        
+        updated_research = dict(research) if research else {}
+        if res.data:
+            existing_critique = (res.data[0].get("research_json") or {}).get("_critique")
+            if existing_critique:
+                updated_research["_critique"] = existing_critique
+
         query = supabase.table("workspaces").update({
-            "research_json": research
+            "research_json": updated_research
         }).eq("id", workspace_id)
         if user_id:
             query = query.eq("user_id", user_id)

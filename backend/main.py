@@ -11,7 +11,7 @@ from db import (
     init_db, save_history, get_all_history_summaries, get_history_by_id, 
     create_workspace, get_workspace, update_workspace_research, 
     toggle_save_workspace, get_user_settings, update_user_settings,
-    save_mentor_chat, get_telegram_link_by_workspace_id
+    save_mentor_chat, get_telegram_link_by_workspace_id, get_workspace_by_idea
 )
 import os
 import uuid
@@ -146,6 +146,18 @@ async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_
     
     idea = payload.idea.strip()
     
+    # Check if a workspace already exists for this user + idea (case-insensitive, trimmed)
+    existing_ws = get_workspace_by_idea(idea, user_id)
+    if existing_ws:
+        logger.info(f"Workspace already exists for idea '{idea}'. Loading cached result.")
+        return {
+            "workspace_id": existing_ws["id"],
+            "research": existing_ws["research"],
+            "plan": existing_ws["plan"],
+            "critique": existing_ws.get("critique", {}),
+            "is_saved": existing_ws.get("is_saved", False)
+        }
+    
     # 1. Research Agent
     research = await research_agent(idea)
     
@@ -157,7 +169,14 @@ async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_
     
     workspace_id = str(uuid.uuid4())
     try:
-        create_workspace(workspace_id=workspace_id, idea=idea, research=research, plan=plan, user_id=user_id)
+        create_workspace(
+            workspace_id=workspace_id, 
+            idea=idea, 
+            research=research, 
+            plan=plan, 
+            user_id=user_id,
+            critique=critique
+        )
     except Exception as e:
         logger.error(f"Failed to create workspace: {e}")
 
@@ -249,7 +268,7 @@ def get_history_item(history_id: str, user_id: str = Depends(get_current_user_id
             "research": workspace["research"],
             "plan": workspace["plan"],
             "is_saved": workspace.get("is_saved", False),
-            "critique": {}
+            "critique": workspace.get("critique", {})
         }
 
 @app.patch("/api/workspaces/{workspace_id}/save")
