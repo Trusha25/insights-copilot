@@ -42,3 +42,15 @@ CREATE TABLE mentor_chats (
     answer TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+
+-- Create user_settings table if it doesn't exist
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    theme TEXT DEFAULT 'dark',
+    primary_model TEXT DEFAULT 'gemini',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add chat_history column to workspaces table if it doesn't exist
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS chat_history JSONB DEFAULT '[]'::jsonb;

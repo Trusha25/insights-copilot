@@ -1,0 +1,207 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { sendChatMessage } from '../api';
+
+export default function FollowUpChat({ workspaceId, initialHistory = [], idea, primaryModel }) {
+  const [messages, setMessages] = useState(initialHistory);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  const messagesEndRef = useRef(null);
+
+  // Sync with workspace changes/reopens
+  useEffect(() => {
+    setMessages(initialHistory || []);
+    setError(null);
+  }, [workspaceId, initialHistory]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
+
+  const handleSend = async (textToSend) => {
+    const text = textToSend || input.trim();
+    if (!text || isLoading) return;
+
+    if (!textToSend) {
+      setInput('');
+    }
+    
+    setError(null);
+    setIsLoading(true);
+
+    // Append user message immediately
+    const userMsg = { role: 'user', content: text };
+    setMessages((prev) => [...prev, userMsg]);
+
+    try {
+      const res = await sendChatMessage(workspaceId, text);
+      // Backend returns the updated chat history
+      if (res && res.chat_history) {
+        setMessages(res.chat_history);
+      } else if (res && res.message) {
+        setMessages((prev) => [...prev, res.message]);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Failed to get response from AI consultant.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const suggestions = [
+    `Suggest tech stack alternatives for ${idea?.substring(0, 15)}...`,
+    `What are the major security risks for this?`,
+    `Propose a monetization strategy for this idea.`,
+    `Draft the initial tasks list for the first milestone.`
+  ];
+
+  const activeModelDisplay = primaryModel === 'grok' ? 'xAI Grok' : 'Gemini 1.5 Flash';
+
+  return (
+    <div className="w-full bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 lg:p-8 shadow-sm flex flex-col transition-all h-[550px] mt-8">
+      {/* Chat Header */}
+      <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800/80 mb-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shadow-sm">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 10.742a3 3 0 110-5.484m0 5.484a3 3 0 112.528 4.713M8.684 10.742A9.75 9.75 0 003 19.76m8.228-4.306A9.75 9.75 0 0118.75 19.76m-7.5-4.306a7.5 7.5 0 01-6 0M18 9v3m0 0v3m0-3h3" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Agentic Follow-Up & Consulting</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Brainstorm, refine features, or critique execution plans in real-time</p>
+          </div>
+        </div>
+
+        {/* Model Indicator Badge */}
+        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100/50 dark:border-indigo-900/30">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+          {activeModelDisplay}
+        </span>
+      </div>
+
+      {/* Message Feed */}
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center px-4 py-8">
+            <span className="text-4xl mb-3">💬</span>
+            <h4 className="font-bold text-slate-700 dark:text-slate-300 text-base">Start a follow-up conversation</h4>
+            <p className="text-slate-400 dark:text-slate-500 text-xs max-w-sm mt-1">
+              Ask questions about the research findings, request stack variations, or ask the consultant to detail your development steps.
+            </p>
+            
+            {/* Suggestions list for empty state */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl w-full mt-6">
+              {suggestions.map((sug, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSend(sug)}
+                  className="text-left p-3 border border-slate-100 dark:border-slate-800/80 rounded-xl text-xs text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-900/30 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50/10 transition-all font-medium"
+                >
+                  {sug}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {messages.map((msg, index) => {
+              const isUser = msg.role === 'user';
+              return (
+                <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                  <div className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed shadow-sm ${
+                    isUser 
+                      ? 'bg-indigo-600 text-white rounded-br-none font-medium' 
+                      : 'bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 rounded-bl-none'
+                  }`}>
+                    {/* Role Header */}
+                    <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70 ${isUser ? 'text-indigo-200' : 'text-indigo-500 dark:text-indigo-400'}`}>
+                      {isUser ? 'You' : 'AI Consultant'}
+                    </div>
+                    
+                    {/* Message Content */}
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {/* Loading Indicator */}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-2xl p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 text-slate-500 rounded-bl-none shadow-sm">
+                  <div className="text-[10px] font-bold uppercase tracking-wider mb-1 text-indigo-500 dark:text-indigo-400 opacity-70">
+                    AI Consultant
+                  </div>
+                  <div className="flex items-center gap-1.5 py-1">
+                    <span className="w-2 h-2 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="w-2 h-2 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="w-2 h-2 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce"></span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-xs">
+                ⚠️ {error}
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
+
+      {/* Chat Input Bar */}
+      {messages.length > 0 && (
+        <div className="flex items-center gap-2 mb-2 overflow-x-auto py-1 shrink-0 scrollbar-none">
+          {suggestions.map((sug, i) => (
+            <button
+              key={i}
+              onClick={() => handleSend(sug)}
+              className="px-3 py-1 border border-slate-200 dark:border-slate-800 rounded-full text-[11px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 whitespace-nowrap transition-all font-medium"
+            >
+              {sug.length > 35 ? sug.substring(0, 35) + '...' : sug}
+            </button>
+          ))}
+        </div>
+      )}
+      
+      <div className="flex items-center gap-3 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 bg-slate-50 dark:bg-[#0b0f19] focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all shrink-0">
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask a follow-up question..."
+          rows="1"
+          className="flex-1 px-3 py-2 bg-transparent text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none resize-none text-sm max-h-24 scrollbar-none"
+          disabled={isLoading}
+        />
+        <button
+          onClick={() => handleSend()}
+          disabled={isLoading || !input.trim()}
+          className="w-10 h-10 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl flex items-center justify-center shadow-md transition-all shrink-0 active:scale-95"
+        >
+          <svg className="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}

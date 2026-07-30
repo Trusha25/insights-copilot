@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
-export default function SettingsView({ theme, onThemeChange }) {
+export default function SettingsView({ theme, onThemeChange, primaryModel = 'gemini', onPrimaryModelChange }) {
   const [activeCategory, setActiveCategory] = useState('appearance');
   const [userEmail, setUserEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -165,6 +165,47 @@ export default function SettingsView({ theme, onThemeChange }) {
                   <div className="text-center">
                     <span className="font-bold text-sm block text-slate-800 dark:text-white">Dark Theme</span>
                     <span className="text-[11px] opacity-75">Deep space darkmode styling</span>
+                  </div>
+                </button>
+              </div>
+
+              <hr className="border-slate-200 dark:border-slate-800 my-6" />
+
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-1">AI Model Settings</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Select the primary conversational model for follow-up chats.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+                {/* Gemini Option */}
+                <button
+                  onClick={() => onPrimaryModelChange('gemini')}
+                  className={`p-5 border rounded-2xl flex flex-col items-center gap-3 transition-all ${
+                    primaryModel === 'gemini'
+                      ? 'border-indigo-600 bg-indigo-50/20 text-indigo-600 dark:text-indigo-400 ring-2 ring-indigo-600/20'
+                      : 'border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:border-slate-300 hover:text-slate-600 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <span className="text-2xl">✨</span>
+                  <div className="text-center">
+                    <span className="font-bold text-sm block text-slate-800 dark:text-white">Gemini 1.5 Flash</span>
+                    <span className="text-[11px] opacity-75">Fast, highly creative responses</span>
+                  </div>
+                </button>
+
+                {/* Grok Option */}
+                <button
+                  onClick={() => onPrimaryModelChange('grok')}
+                  className={`p-5 border rounded-2xl flex flex-col items-center gap-3 transition-all ${
+                    primaryModel === 'grok'
+                      ? 'border-indigo-600 bg-indigo-50/20 text-indigo-600 dark:text-indigo-400 ring-2 ring-indigo-600/20'
+                      : 'border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:border-slate-300 hover:text-slate-600 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <span className="text-2xl">⚡</span>
+                  <div className="text-center">
+                    <span className="font-bold text-sm block text-slate-800 dark:text-white">xAI Grok</span>
+                    <span className="text-[11px] opacity-75">Direct, analytical insights</span>
                   </div>
                 </button>
               </div>

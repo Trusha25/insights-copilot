@@ -8,6 +8,7 @@ import ResourcesCard from './components/ResourcesCard';
 import HistoryView from './components/HistoryView';
 import LoginView from './components/LoginView';
 import SettingsView from './components/SettingsView';
+import FollowUpChat from './components/FollowUpChat';
 import { supabase } from './supabaseClient';
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
     }
     return saved;
   });
+  const [primaryModel, setPrimaryModel] = useState('gemini');
 
   const handleThemeChange = async (newTheme) => {
     setTheme(newTheme);
@@ -36,9 +38,18 @@ export default function App() {
       document.documentElement.classList.remove('dark');
     }
     try {
-      await saveSettings(newTheme);
+      await saveSettings(newTheme, primaryModel);
     } catch (e) {
       console.error("Failed to save settings preference:", e);
+    }
+  };
+
+  const handlePrimaryModelChange = async (newModel) => {
+    setPrimaryModel(newModel);
+    try {
+      await saveSettings(theme, newModel);
+    } catch (e) {
+      console.error("Failed to save model settings preference:", e);
     }
   };
   const [newSourceUrls, setNewSourceUrls] = useState([]);
@@ -52,7 +63,7 @@ export default function App() {
   const [elapsedSecs, setElapsedSecs] = useState(0);
 
   useEffect(() => {
-    const applyTheme = async () => {
+    const loadSettings = async () => {
       try {
         const data = await fetchSettings();
         if (data.theme && (data.theme === 'dark' || data.theme === 'light')) {
@@ -64,8 +75,11 @@ export default function App() {
             document.documentElement.classList.remove('dark');
           }
         }
+        if (data.primary_model) {
+          setPrimaryModel(data.primary_model);
+        }
       } catch (err) {
-        console.warn("Could not fetch user theme settings, defaulting to local storage or dark mode", err);
+        console.warn("Could not fetch user settings, defaulting to local storage or dark mode", err);
         const saved = localStorage.getItem('theme') || 'dark';
         if (saved === 'dark') {
           document.documentElement.classList.add('dark');
@@ -78,13 +92,13 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthLoading(false);
-      if (session) applyTheme();
+      if (session) loadSettings();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setAuthLoading(false);
-      if (session) applyTheme();
+      if (session) loadSettings();
     });
 
     return () => subscription.unsubscribe();
@@ -270,7 +284,12 @@ export default function App() {
           onToggleSaveCache={handleToggleSaveCache} 
         />
       ) : currentView === 'settings' ? (
-        <SettingsView theme={theme} onThemeChange={handleThemeChange} />
+        <SettingsView 
+          theme={theme} 
+          onThemeChange={handleThemeChange} 
+          primaryModel={primaryModel}
+          onPrimaryModelChange={handlePrimaryModelChange}
+        />
       ) : (
         <main className="flex-1 p-6 lg:p-10 min-w-0 font-sans bg-slate-50 dark:bg-[#0b0f19] transition-colors">
           {/* Dashboard Header */}
@@ -366,12 +385,21 @@ export default function App() {
 
           {/* MAIN CANVAS VIEWS */}
           {currentView === 'home' && result && (
-            /* Workspace Detail View (4 Cards) */
-            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-6 items-start">
-              <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={result?.workspace_id} onRefreshSuccess={handleRefreshResearch} />
-              <ArchitectureCard status={status} plan={result?.plan} />
-              <PlanCard status={status} roadmap={result?.plan?.roadmap} />
-              <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} />
+            /* Workspace Detail View (4 Cards + Follow Up Chat) */
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-6 items-start">
+                <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={result?.workspace_id} onRefreshSuccess={handleRefreshResearch} />
+                <ArchitectureCard status={status} plan={result?.plan} />
+                <PlanCard status={status} roadmap={result?.plan?.roadmap} />
+                <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} />
+              </div>
+              
+              <FollowUpChat 
+                workspaceId={result?.workspace_id} 
+                initialHistory={result?.chat_history || []} 
+                idea={idea}
+                primaryModel={primaryModel}
+              />
             </div>
           )}
 

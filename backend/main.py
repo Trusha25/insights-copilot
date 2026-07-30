@@ -11,12 +11,14 @@ from db import (
     init_db, save_history, get_all_history_summaries, get_history_by_id, 
     create_workspace, get_workspace, update_workspace_research, 
     toggle_save_workspace, get_user_settings, update_user_settings,
-    save_mentor_chat, get_telegram_link_by_workspace_id, get_workspace_by_idea
+    save_mentor_chat, get_telegram_link_by_workspace_id, get_workspace_by_idea,
+    update_workspace_chat_history
 )
 import os
 import uuid
 import logging
 import threading
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +116,10 @@ class MentorRequest(BaseModel):
 
 class SettingsUpdate(BaseModel):
     theme: str
+    primary_model: str = None
+
+class ChatPayload(BaseModel):
+    message: str
 
 security = HTTPBearer()
 
@@ -155,7 +161,8 @@ async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_
             "research": existing_ws["research"],
             "plan": existing_ws["plan"],
             "critique": existing_ws.get("critique", {}),
-            "is_saved": existing_ws.get("is_saved", False)
+            "is_saved": existing_ws.get("is_saved", False),
+            "chat_history": existing_ws.get("chat_history", [])
         }
     
     # 1. Research Agent
@@ -184,7 +191,8 @@ async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_
         "workspace_id": workspace_id,
         "research": research,
         "plan": plan,
-        "critique": critique
+        "critique": critique,
+        "chat_history": []
     }
     # Passively save to history — never fail the request if this errors
     try:
@@ -264,11 +272,12 @@ def get_history_item(history_id: str, user_id: str = Depends(get_current_user_id
         if not workspace:
             raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
         return {
-            "workspace_id": workspace["id"],
+            "workspace_id": workspace.get("id"),
             "research": workspace["research"],
             "plan": workspace["plan"],
             "is_saved": workspace.get("is_saved", False),
-            "critique": workspace.get("critique", {})
+            "critique": workspace.get("critique", {}),
+            "chat_history": workspace.get("chat_history", [])
         }
 
 @app.patch("/api/workspaces/{workspace_id}/save")
@@ -289,7 +298,9 @@ def get_settings(user_id: str = Depends(get_current_user_id)):
 def update_settings(payload: SettingsUpdate, user_id: str = Depends(get_current_user_id)):
     if payload.theme not in ["light", "dark"]:
         raise HTTPException(status_code=400, detail="Theme must be 'light' or 'dark'")
-    return update_user_settings(user_id, payload.theme)
+    if payload.primary_model and payload.primary_model not in ["gemini", "grok"]:
+        raise HTTPException(status_code=400, detail="Primary model must be 'gemini' or 'grok'")
+    return update_user_settings(user_id, payload.theme, payload.primary_model)
 
 @app.post("/api/workspaces/{workspace_id}/refresh")
 async def refresh_workspace(workspace_id: str, user_id: str = Depends(get_current_user_id)):
@@ -351,3 +362,183 @@ async def mentor(payload: MentorRequest, user_id: str = Depends(get_current_user
             logger.error(f"Failed to save mentor chat: {e}")
             
     return res
+
+@app.post("/api/workspaces/{workspace_id}/chat")
+async def workspace_chat(
+    workspace_id: str, 
+    payload: ChatPayload, 
+    user_id: str = Depends(get_current_user_id)
+):
+    if not payload.message or not payload.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+        
+    workspace = get_workspace(workspace_id, user_id=user_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
+        
+    # Get user settings to check primary model
+    settings = get_user_settings(user_id)
+    primary_model = settings.get("primary_model", "gemini")
+    
+    # Extract details
+    idea = workspace.get("idea", "")
+    research = workspace.get("research", {})
+    plan = workspace.get("plan", {})
+    critique = workspace.get("critique", {})
+    chat_history = workspace.get("chat_history", [])
+    
+    user_msg = payload.message.strip()
+    
+    # Prepare system instruction / system prompt
+    system_prompt = (
+        "You are an elite startup advisor and technical co-founder. "
+        "You are helping the user build, refine, and troubleshoot their startup concept. "
+        f"The user's startup idea is: \"{idea}\"\n\n"
+        "Here is the technical analysis generated for it:\n"
+        f"- Research Summary: {json.dumps(research.get('market_research_summary', ''))}\n"
+        f"- Key Competitors: {json.dumps(research.get('existing_solutions', []))}\n"
+        f"- Technical Roadmap: {json.dumps(plan.get('tech_stack', []))} and {len(plan.get('roadmap', []))} milestones.\n"
+        f"- Critique Verdict: {json.dumps(critique.get('overall_verdict', ''))}\n\n"
+        "Provide helpful, specific, and actionable advice to the user's questions. "
+        "Do not summarize the whole project again unless asked. Be direct, conversational, and expert. "
+        "Keep your response to a maximum of 4 sentences unless detailed step-by-step instructions are explicitly requested."
+    )
+    
+    # Call model
+    assistant_response = ""
+    try:
+        if primary_model == "grok":
+            xai_key = os.getenv("XAI_API_KEY", "").strip() or os.getenv("GROK_API_KEY", "").strip()
+            if xai_key:
+                logger.info("Calling xAI Grok API for follow-up chat")
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                ]
+                for msg in chat_history:
+                    messages.append({"role": msg["role"], "content": msg["content"]})
+                messages.append({"role": "user", "content": user_msg})
+                
+                async with httpx.AsyncClient() as c:
+                    res = await c.post(
+                        "https://api.x.ai/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
+                        json={
+                            "model": "grok-2",
+                            "messages": messages,
+                            "temperature": 0.7
+                        },
+                        timeout=30.0
+                    )
+                    res.raise_for_status()
+                    res_json = res.json()
+                    assistant_response = res_json["choices"][0]["message"]["content"]
+            else:
+                logger.info("xAI API key not set, falling back to Groq Llama for Grok choice")
+                from agents import client as groq_client
+                if groq_client:
+                    messages = [
+                        {"role": "system", "content": system_prompt},
+                    ]
+                    for msg in chat_history:
+                        messages.append({"role": msg["role"], "content": msg["content"]})
+                    messages.append({"role": "user", "content": user_msg})
+                    
+                    res = await groq_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=messages,
+                        temperature=0.7
+                    )
+                    assistant_response = res.choices[0].message.content
+                else:
+                    raise ValueError("Neither xAI nor Groq client is configured")
+        else: # gemini
+            gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+            if not gemini_key:
+                logger.warning("GEMINI_API_KEY not set. Falling back to Groq Llama.")
+                from agents import client as groq_client
+                if groq_client:
+                    messages = [
+                        {"role": "system", "content": system_prompt},
+                    ]
+                    for msg in chat_history:
+                        messages.append({"role": msg["role"], "content": msg["content"]})
+                    messages.append({"role": "user", "content": user_msg})
+                    
+                    res = await groq_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=messages,
+                        temperature=0.7
+                    )
+                    assistant_response = res.choices[0].message.content
+                else:
+                    raise ValueError("GEMINI_API_KEY is missing and Groq fallback is unavailable.")
+            else:
+                logger.info("Calling Gemini Flash API for follow-up chat")
+                body = {
+                    "contents": [],
+                    "system_instruction": {
+                        "parts": [{"text": system_prompt}]
+                    },
+                    "generationConfig": {
+                        "temperature": 0.7
+                    }
+                }
+                for msg in chat_history:
+                    role = "user" if msg["role"] == "user" else "model"
+                    body["contents"].append({
+                        "role": role,
+                        "parts": [{"text": msg["content"]}]
+                    })
+                body["contents"].append({
+                    "role": "user",
+                    "parts": [{"text": user_msg}]
+                })
+                
+                async with httpx.AsyncClient() as c:
+                    res = await c.post(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
+                        json=body,
+                        timeout=30.0
+                    )
+                    res.raise_for_status()
+                    res_json = res.json()
+                    assistant_response = res_json["candidates"][0]["content"]["parts"][0]["text"]
+                    
+    except Exception as e:
+        logger.error(f"Error calling follow-up LLM model: {e}")
+        from agents import client as groq_client
+        if groq_client:
+            try:
+                logger.info("Last-ditch fallback to Groq Llama")
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                ]
+                for msg in chat_history:
+                    messages.append({"role": msg["role"], "content": msg["content"]})
+                messages.append({"role": "user", "content": user_msg})
+                res = await groq_client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=messages,
+                    temperature=0.7
+                )
+                assistant_response = res.choices[0].message.content
+            except Exception as inner_e:
+                raise HTTPException(status_code=500, detail=f"Failed to generate response: {e}. Fallback error: {inner_e}")
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to generate response from model: {e}")
+            
+    # Update chat history
+    new_chat_history = list(chat_history)
+    new_chat_history.append({"role": "user", "content": user_msg})
+    new_chat_history.append({"role": "assistant", "content": assistant_response})
+    
+    update_workspace_chat_history(workspace_id, new_chat_history, user_id=user_id)
+    
+    return {
+        "workspace_id": workspace_id,
+        "message": {
+            "role": "assistant",
+            "content": assistant_response
+        },
+        "chat_history": new_chat_history
+    }

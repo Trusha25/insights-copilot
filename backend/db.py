@@ -87,6 +87,15 @@ def get_history_by_id(history_id: int, user_id: str = None):
                 ws_res = supabase.table("workspaces").select("is_saved").eq("id", ws_id).execute()
                 is_saved = ws_res.data[0]["is_saved"] if ws_res.data else False
                 result_payload["is_saved"] = is_saved
+                
+                # Fetch active chat_history from workspace if exists
+                ws_data = get_workspace(ws_id, user_id)
+                if ws_data:
+                    result_payload["chat_history"] = ws_data.get("chat_history", [])
+                else:
+                    result_payload["chat_history"] = []
+            else:
+                result_payload["chat_history"] = []
             return result_payload
         return None
     except Exception as e:
@@ -124,13 +133,21 @@ def get_workspace(workspace_id: str, user_id: str = None):
             row = response.data[0]
             research = dict(row["research_json"] or {})
             critique = research.pop("_critique", {})
+            # Try to get chat_history from column, or fallback to research_json
+            chat_history = row.get("chat_history")
+            if chat_history is None:
+                chat_history = research.pop("chat_history", [])
+            else:
+                # Remove from research if it was popped out or is in there
+                research.pop("chat_history", None)
             return {
                 "id": row["id"],
                 "idea": row["idea"],
                 "research": research,
                 "plan": row["plan_json"],
                 "is_saved": row.get("is_saved", False),
-                "critique": critique
+                "critique": critique,
+                "chat_history": chat_history
             }
         return None
     except Exception as e:
@@ -150,13 +167,20 @@ def get_workspace_by_idea(idea: str, user_id: str):
                 if row["idea"].strip().lower() == target:
                     research = dict(row["research_json"] or {})
                     critique = research.pop("_critique", {})
+                    # extract chat_history
+                    chat_history = row.get("chat_history")
+                    if chat_history is None:
+                        chat_history = research.pop("chat_history", [])
+                    else:
+                        research.pop("chat_history", None)
                     return {
                         "id": row["id"],
                         "idea": row["idea"],
                         "research": research,
                         "plan": row["plan_json"],
                         "is_saved": row.get("is_saved", False),
-                        "critique": critique
+                        "critique": critique,
+                        "chat_history": chat_history
                     }
         return None
     except Exception as e:
@@ -266,31 +290,55 @@ def update_last_reminder(chat_id: str):
 def get_user_settings(user_id: str) -> dict:
     try:
         supabase = get_supabase()
-        response = supabase.table("user_settings").select("theme").eq("user_id", user_id).execute()
+        response = supabase.table("user_settings").select("theme, primary_model").eq("user_id", user_id).execute()
         if response.data:
-            return {"theme": response.data[0].get("theme", "dark")}
+            row = response.data[0]
+            return {
+                "theme": row.get("theme", "dark"),
+                "primary_model": row.get("primary_model", "gemini")
+            }
         
-        default_settings = {"user_id": user_id, "theme": "dark"}
-        supabase.table("user_settings").insert(default_settings).execute()
-        return {"theme": "dark"}
+        default_settings = {"user_id": user_id, "theme": "dark", "primary_model": "gemini"}
+        try:
+            supabase.table("user_settings").insert(default_settings).execute()
+        except Exception as insert_err:
+            logger.warning(f"Could not insert user settings (table might be missing): {insert_err}")
+        return {"theme": "dark", "primary_model": "gemini"}
     except Exception as e:
         logger.error(f"Failed to get user settings: {e}")
-        return {"theme": "dark"}
+        return {"theme": "dark", "primary_model": "gemini"}
 
-def update_user_settings(user_id: str, theme: str) -> dict:
+def update_user_settings(user_id: str, theme: str, primary_model: str = None) -> dict:
     try:
         if theme not in ["light", "dark"]:
             raise ValueError("Theme must be 'light' or 'dark'")
-        supabase = get_supabase()
-        supabase.table("user_settings").upsert({
+        if primary_model and primary_model not in ["gemini", "grok"]:
+            raise ValueError("Primary model must be 'gemini' or 'grok'")
+            
+        payload = {
             "user_id": user_id,
             "theme": theme,
             "updated_at": datetime.utcnow().isoformat() + "Z"
-        }).execute()
-        return {"theme": theme}
+        }
+        if primary_model:
+            payload["primary_model"] = primary_model
+            
+        supabase = get_supabase()
+        try:
+            supabase.table("user_settings").upsert(payload).execute()
+        except Exception as upsert_err:
+            logger.warning(f"Could not upsert user settings (table might be missing): {upsert_err}")
+            
+        ret = {"theme": theme}
+        if primary_model:
+            ret["primary_model"] = primary_model
+        return ret
     except Exception as e:
         logger.error(f"Failed to update user settings: {e}")
-        return {"theme": theme}
+        ret = {"theme": theme}
+        if primary_model:
+            ret["primary_model"] = primary_model
+        return ret
 
 def get_telegram_link_by_workspace_id(workspace_id: str):
     try:
@@ -316,3 +364,35 @@ def save_mentor_chat(workspace_id: str, question: str, answer: str, user_id: str
         supabase.table("mentor_chats").insert(payload).execute()
     except Exception as e:
         logger.error(f"Failed to save mentor chat for workspace {workspace_id}: {e}")
+
+def update_workspace_chat_history(workspace_id: str, chat_history: list, user_id: str = None):
+    try:
+        supabase = get_supabase()
+        # Try updating the chat_history column directly
+        try:
+            query = supabase.table("workspaces").update({
+                "chat_history": chat_history
+            }).eq("id", workspace_id)
+            if user_id:
+                query = query.eq("user_id", user_id)
+            query.execute()
+        except Exception as col_err:
+            # Column doesn't exist, fallback to saving inside research_json
+            logger.info(f"chat_history column not found or error, falling back to research_json: {col_err}")
+            query = supabase.table("workspaces").select("research_json").eq("id", workspace_id)
+            if user_id:
+                query = query.eq("user_id", user_id)
+            res = query.execute()
+            if res.data:
+                research = dict(res.data[0].get("research_json") or {})
+                research["chat_history"] = chat_history
+                
+                query_update = supabase.table("workspaces").update({
+                    "research_json": research
+                }).eq("id", workspace_id)
+                if user_id:
+                    query_update = query_update.eq("user_id", user_id)
+                query_update.execute()
+    except Exception as e:
+        logger.error(f"Failed to update chat history for workspace {workspace_id}: {e}")
+        raise e

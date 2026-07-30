@@ -90,12 +90,12 @@ export async function fetchSettings() {
   return await response.json();
 }
 
-export async function saveSettings(theme) {
+export async function saveSettings(theme, primaryModel = null) {
   const headers = await getHeaders();
   const response = await fetch(`${BASE_URL}/api/settings`, {
     method: 'PUT',
     headers,
-    body: JSON.stringify({ theme }),
+    body: JSON.stringify({ theme, primary_model: primaryModel }),
   });
   if (!response.ok) throw new Error('Failed to save settings');
   return await response.json();
@@ -116,5 +116,19 @@ export async function fetchTelegramLink(workspaceId) {
     headers,
   });
   if (!response.ok) throw new Error('Failed to fetch Telegram link');
+  return await response.json();
+}
+
+export async function sendChatMessage(workspaceId, message) {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/workspaces/${workspaceId}/chat`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ message }),
+  });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.detail || `Server returned status ${response.status}`);
+  }
   return await response.json();
 }
