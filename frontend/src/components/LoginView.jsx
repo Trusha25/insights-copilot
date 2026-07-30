@@ -79,11 +79,6 @@ export default function LoginView() {
 
       if (error) throw error;
       
-      // Handle Remember Me session configurations if necessary
-      if (!rememberMe) {
-        // Supabase persists session by default, we can warn the user or let it behave normally.
-        // Production standard: if remember me is off, we can clear token on window closure.
-      }
     } catch (err) {
       setErrorMsg(err.message || 'Invalid email or password.');
     } finally {
@@ -165,14 +160,14 @@ export default function LoginView() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#0b0f19] flex items-center justify-center p-6 relative overflow-hidden font-sans select-none">
+    <div className="min-h-screen w-full bg-[var(--bg-primary)] flex items-center justify-center p-6 relative overflow-hidden font-sans select-none">
       {/* Decorative Blur Backgrounds */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px] pointer-events-none animate-pulse"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--color-accent)]/10 rounded-full blur-[100px] pointer-events-none animate-pulse"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[var(--color-accent-hover)]/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-      <div className="w-full max-w-md bg-[#111827]/70 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl relative z-10">
+      <div className="w-full max-w-md bg-[var(--bg-card)] backdrop-blur-xl border border-[var(--color-border)] rounded-3xl p-8 shadow-2xl relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600/10 text-indigo-400 rounded-2xl mb-4 border border-indigo-500/20">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-[var(--color-accent-bg)] text-[var(--color-accent)] rounded-2xl mb-4 border border-[var(--color-border-hover)]">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 009 11V7a3 3 0 116 0v4c0 1.542.42 2.97 1.135 4.197m0 0a13.916 13.916 0 013.44 2.04M12 11a14.28 14.28 0 003.44-2.04m-3.44 2.04c-.722 0-1.428-.15-2.073-.418m2.073.418c.718 0 1.41-.144 2.047-.406m0 0c.056-.023.111-.047.166-.072m0 0a13.916 13.916 0 003.44-2.04M12 14a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -209,11 +204,11 @@ export default function LoginView() {
              ========================================================================= */
           <form onSubmit={handleSignUp} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Full Name</label>
+              <label className="block text-sm font-medium text-slate-355 mb-1.5">Full Name</label>
               <input
                 type="text"
                 required
-                className="w-full px-4 py-2.5 bg-[#1f2937]/50 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm"
+                className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)] focus:ring-2 focus:ring-[var(--color-accent)]/10 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm"
                 placeholder="John Doe"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -222,11 +217,11 @@ export default function LoginView() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Email Address</label>
+              <label className="block text-sm font-medium text-slate-355 mb-1.5">Email Address</label>
               <input
                 type="email"
                 required
-                className="w-full px-4 py-2.5 bg-[#1f2937]/50 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm"
+                className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)] focus:ring-2 focus:ring-[var(--color-accent)]/10 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm"
                 placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -236,10 +231,10 @@ export default function LoginView() {
 
             <div>
               <div className="flex justify-between items-center mb-1.5">
-                <label className="block text-sm font-medium text-slate-300">Password</label>
+                <label className="block text-sm font-medium text-slate-355">Password</label>
                 {password && (
                   <span className="text-xs font-semibold text-slate-400">
-                    Strength: <span className="text-indigo-400">{strength.label}</span>
+                    Strength: <span className="text-[var(--color-accent)]">{strength.label}</span>
                   </span>
                 )}
               </div>
@@ -247,7 +242,7 @@ export default function LoginView() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  className="w-full px-4 py-2.5 bg-[#1f2937]/50 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm pr-10"
+                  className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)] focus:ring-2 focus:ring-[var(--color-accent)]/10 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm pr-10"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -256,7 +251,7 @@ export default function LoginView() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white"
+                  className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white cursor-pointer"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
@@ -283,11 +278,11 @@ export default function LoginView() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Confirm Password</label>
+              <label className="block text-sm font-medium text-slate-355 mb-1.5">Confirm Password</label>
               <input
                 type="password"
                 required
-                className="w-full px-4 py-2.5 bg-[#1f2937]/50 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm"
+                className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)] focus:ring-2 focus:ring-[var(--color-accent)]/10 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -300,14 +295,14 @@ export default function LoginView() {
                 id="terms"
                 type="checkbox"
                 required
-                className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer"
+                className="mt-1 w-4 h-4 rounded border-[var(--color-border)] bg-[var(--bg-surface)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]/10 cursor-pointer"
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
                 disabled={loading}
               />
               <label htmlFor="terms" className="text-xs text-slate-400 select-none cursor-pointer">
                 I accept the{' '}
-                <a href="#terms" className="text-indigo-400 hover:text-indigo-300 font-semibold underline">
+                <a href="#terms" className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-semibold underline">
                   Terms & Conditions
                 </a>{' '}
                 and Privacy Policy.
@@ -317,7 +312,7 @@ export default function LoginView() {
             <button
               type="submit"
               disabled={loading || !fullName || !email || !password || !confirmPassword || !termsAccepted}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-2xl transition-colors shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 text-sm mt-2"
+              className="w-full py-3 theme-btn-primary rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm mt-2 cursor-pointer disabled:opacity-50 hover:translate-y-0"
             >
               {loading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -332,11 +327,11 @@ export default function LoginView() {
              ========================================================================= */
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Email Address</label>
+              <label className="block text-sm font-medium text-slate-355 mb-1.5">Email Address</label>
               <input
                 type="email"
                 required
-                className="w-full px-4 py-2.5 bg-[#1f2937]/50 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm"
+                className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)] focus:ring-2 focus:ring-[var(--color-accent)]/10 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm"
                 placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -346,8 +341,8 @@ export default function LoginView() {
 
             <div>
               <div className="flex justify-between items-center mb-1.5">
-                <label className="block text-sm font-medium text-slate-300">Password</label>
-                <a href="#forgot" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+                <label className="block text-sm font-medium text-slate-355">Password</label>
+                <a href="#forgot" className="text-xs text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-semibold transition-colors">
                   Forgot Password?
                 </a>
               </div>
@@ -355,7 +350,7 @@ export default function LoginView() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  className="w-full px-4 py-2.5 bg-[#1f2937]/50 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm pr-10"
+                  className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)] focus:ring-2 focus:ring-[var(--color-accent)]/10 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm pr-10"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -364,10 +359,10 @@ export default function LoginView() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white"
+                  className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white cursor-pointer"
                 >
                   {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 01-1.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
                   ) : (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                   )}
@@ -380,7 +375,7 @@ export default function LoginView() {
                 <input
                   id="remember"
                   type="checkbox"
-                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer"
+                  className="w-4 h-4 rounded border-[var(--color-border)] bg-[var(--bg-surface)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]/10 cursor-pointer"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   disabled={loading}
@@ -394,7 +389,7 @@ export default function LoginView() {
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-2xl transition-colors shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 text-sm"
+              className="w-full py-3.5 theme-btn-primary rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50 hover:translate-y-0"
             >
               {loading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -411,7 +406,7 @@ export default function LoginView() {
             <button
               onClick={() => setIsSignUp(!isSignUp)}
               disabled={loading}
-              className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors focus:outline-none"
+              className="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] font-semibold transition-colors focus:outline-none cursor-pointer"
             >
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
@@ -420,9 +415,9 @@ export default function LoginView() {
 
         <div className="relative my-6 flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-800"></div>
+            <div className="w-full border-t border-[var(--color-border)]"></div>
           </div>
-          <span className="relative px-4 bg-[#111827] text-xs font-semibold text-slate-500 uppercase tracking-widest">
+          <span className="relative px-4 bg-[#0a0d17] text-xs font-semibold text-slate-500 uppercase tracking-widest">
             Or continue with
           </span>
         </div>
@@ -430,7 +425,7 @@ export default function LoginView() {
         <button
           onClick={handleGitHubLogin}
           disabled={loading}
-          className="w-full py-3.5 bg-[#1f2937]/50 hover:bg-[#1f2937] text-white border border-slate-700 hover:border-slate-600 font-semibold rounded-2xl transition-all flex items-center justify-center gap-3 text-sm"
+          className="w-full py-3.5 bg-[var(--bg-surface)] hover:bg-[var(--color-accent-bg)]/50 text-white border border-[var(--color-border)] hover:border-[var(--color-border-hover)] font-semibold rounded-2xl transition-all flex items-center justify-center gap-3 text-sm cursor-pointer"
         >
           <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
             <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
