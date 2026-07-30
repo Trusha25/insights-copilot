@@ -100,3 +100,21 @@ export async function saveSettings(theme) {
   if (!response.ok) throw new Error('Failed to save settings');
   return await response.json();
 }
+
+export async function fetchWorkspaces() {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/workspaces`, {
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to fetch workspaces');
+  return await response.json();
+}
+
+export async function fetchTelegramLink(workspaceId) {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/workspaces/${workspaceId}/telegram-link`, {
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to fetch Telegram link');
+  return await response.json();
+}

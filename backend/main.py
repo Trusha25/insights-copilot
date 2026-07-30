@@ -10,7 +10,8 @@ from agents import research_agent, planner_agent, critic_agent, mentor_agent
 from db import (
     init_db, save_history, get_all_history_summaries, get_history_by_id, 
     create_workspace, get_workspace, update_workspace_research, 
-    toggle_save_workspace, get_user_settings, update_user_settings
+    toggle_save_workspace, get_user_settings, update_user_settings,
+    save_mentor_chat, get_telegram_link_by_workspace_id
 )
 import os
 import uuid
@@ -109,6 +110,7 @@ class MentorRequest(BaseModel):
     research: dict
     plan: dict
     question: str
+    workspace_id: str = None
 
 class SettingsUpdate(BaseModel):
     theme: str
@@ -179,6 +181,52 @@ def get_telegram_link_endpoint(workspace_id: str, user_id: str = Depends(get_cur
         raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
     bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "insights_copilot_bot")
     return {"deep_link": f"https://t.me/{bot_username}?start={workspace_id}"}
+
+@app.get("/api/workspaces")
+def get_workspaces_endpoint(user_id: str = Depends(get_current_user_id)):
+    try:
+        from db import get_supabase
+        supabase = get_supabase()
+        res = supabase.table("workspaces").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        workspaces_data = []
+        for row in (res.data or []):
+            ws_id = row["id"]
+            link = get_telegram_link_by_workspace_id(ws_id)
+            current_idx = link["current_milestone_index"] if link else 0
+            
+            # Fetch latest mentor Q&A
+            try:
+                mentor_res = supabase.table("mentor_chats").select("question, answer").eq("workspace_id", ws_id).order("created_at", desc=True).limit(1).execute()
+                latest_mentor = mentor_res.data[0] if mentor_res.data else None
+            except Exception as e:
+                logger.warning(f"Could not fetch mentor chats for workspace {ws_id}: {e}")
+                latest_mentor = None
+            
+            plan_json = row.get("plan_json") or {}
+            roadmap = plan_json.get("roadmap", [])
+            total_milestones = len(roadmap)
+            
+            if current_idx < total_milestones:
+                next_step = roadmap[current_idx].get("milestone", f"Milestone {current_idx + 1}")
+            else:
+                next_step = "All milestones completed!"
+                
+            workspaces_data.append({
+                "id": ws_id,
+                "idea": row["idea"],
+                "created_at": row["created_at"],
+                "is_saved": row.get("is_saved", False),
+                "milestone_progress": f"Milestone {current_idx} of {total_milestones}",
+                "current_milestone_index": current_idx,
+                "total_milestones": total_milestones,
+                "next_step_title": next_step,
+                "telegram_linked": bool(link),
+                "latest_mentor": latest_mentor
+            })
+        return workspaces_data
+    except Exception as e:
+        logger.error(f"Failed to fetch workspaces list: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/history")
 def get_history(saved: bool = False, user_id: str = Depends(get_current_user_id)):
@@ -270,4 +318,17 @@ async def mentor(payload: MentorRequest, user_id: str = Depends(get_current_user
         plan=payload.plan, 
         question=payload.question
     )
+    
+    # Save the exchange to mentor_chats if workspace_id is provided
+    if payload.workspace_id:
+        try:
+            save_mentor_chat(
+                workspace_id=payload.workspace_id,
+                question=payload.question,
+                answer=res.get("answer", ""),
+                user_id=user_id
+            )
+        except Exception as e:
+            logger.error(f"Failed to save mentor chat: {e}")
+            
     return res

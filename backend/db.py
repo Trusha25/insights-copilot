@@ -246,3 +246,28 @@ def update_user_settings(user_id: str, theme: str) -> dict:
     except Exception as e:
         logger.error(f"Failed to update user settings: {e}")
         return {"theme": theme}
+
+def get_telegram_link_by_workspace_id(workspace_id: str):
+    try:
+        supabase = get_supabase()
+        response = supabase.table("telegram_links").select("*").eq("workspace_id", workspace_id).execute()
+        if response.data and len(response.data) > 0:
+            return response.data[0]
+        return None
+    except Exception as e:
+        logger.error(f"Failed to get telegram link for workspace {workspace_id}: {e}")
+        return None
+
+def save_mentor_chat(workspace_id: str, question: str, answer: str, user_id: str = None):
+    try:
+        supabase = get_supabase()
+        payload = {
+            "workspace_id": workspace_id,
+            "question": question,
+            "answer": answer
+        }
+        if user_id:
+            payload["user_id"] = user_id
+        supabase.table("mentor_chats").insert(payload).execute()
+    except Exception as e:
+        logger.error(f"Failed to save mentor chat for workspace {workspace_id}: {e}")
