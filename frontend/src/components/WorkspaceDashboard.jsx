@@ -105,7 +105,7 @@ export default function WorkspaceDashboard({
             </h1>
             <button
               onClick={onEditIdea}
-              className="p-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] text-xs font-bold text-slate-450 hover:text-[var(--color-accent)] hover:border-[var(--color-border-hover)] transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+              className="p-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] text-xs font-bold text-slate-400 hover:text-[var(--color-accent)] hover:border-[var(--color-border-hover)] transition-all cursor-pointer flex items-center gap-1 shadow-sm"
               title="Edit original pitch"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -414,10 +414,10 @@ export default function WorkspaceDashboard({
                 <line x1="10" y1="50" x2="90" y2="50" className="stroke-slate-800/75" strokeWidth="0.5" />
                 
                 {/* Labels */}
-                <text x="50" y="8" className="text-[5.5px] fill-slate-550 font-bold" textAnchor="middle">MARKET</text>
-                <text x="92" y="52" className="text-[5.5px] fill-slate-550 font-bold" textAnchor="start">BUSINESS</text>
-                <text x="50" y="96" className="text-[5.5px] fill-slate-550 font-bold" textAnchor="middle">RISK</text>
-                <text x="8" y="52" className="text-[5.5px] fill-slate-550 font-bold" textAnchor="end">TECH</text>
+                <text x="50" y="8" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">MARKET</text>
+                <text x="92" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="start">BUSINESS</text>
+                <text x="50" y="96" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">RISK</text>
+                <text x="8" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="end">TECH</text>
 
                 {/* Scaling variables coordinates polygon */}
                 <polygon
