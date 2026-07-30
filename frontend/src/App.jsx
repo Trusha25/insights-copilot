@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { analyzeIdea, toggleSaveWorkspace, fetchSettings, fetchHistoryItem, fetchWorkspaces, fetchTelegramLink } from './api';
+import { analyzeIdea, toggleSaveWorkspace, fetchSettings, saveSettings, fetchHistoryItem, fetchWorkspaces, fetchTelegramLink } from './api';
 import Sidebar from './components/Sidebar';
 import ResearchCard from './components/ResearchCard';
 import PlanCard from './components/PlanCard';
@@ -16,7 +16,31 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [elapsedTime, setElapsedTime] = useState("~0.0s");
-  const [currentView, setCurrentView] = useState("dashboard");
+  const [currentView, setCurrentView] = useState("home");
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('theme') || 'dark';
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    return saved;
+  });
+
+  const handleThemeChange = async (newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    try {
+      await saveSettings(newTheme);
+    } catch (e) {
+      console.error("Failed to save settings preference:", e);
+    }
+  };
   const [newSourceUrls, setNewSourceUrls] = useState([]);
   const [toastMessage, setToastMessage] = useState("");
   const [loadedChats, setLoadedChats] = useState({});
@@ -31,14 +55,23 @@ export default function App() {
     const applyTheme = async () => {
       try {
         const data = await fetchSettings();
-        if (data.theme === 'dark') {
+        if (data.theme && (data.theme === 'dark' || data.theme === 'light')) {
+          setTheme(data.theme);
+          localStorage.setItem('theme', data.theme);
+          if (data.theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch user theme settings, defaulting to local storage or dark mode", err);
+        const saved = localStorage.getItem('theme') || 'dark';
+        if (saved === 'dark') {
           document.documentElement.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
         }
-      } catch (err) {
-        console.warn("Could not fetch user theme settings, defaulting to dark mode", err);
-        document.documentElement.classList.add('dark'); // Default fallback
       }
     };
 
@@ -116,7 +149,7 @@ export default function App() {
     setStatus("loading");
     setResult(null);
     setErrorMessage("");
-    setCurrentView("dashboard");
+    setCurrentView("home");
     try {
       const data = await analyzeIdea(idea);
       setResult(data);
@@ -151,7 +184,7 @@ export default function App() {
     setResult(savedResult);
     setStatus("done");
     setElapsedTime("(restored)");
-    setCurrentView("dashboard");
+    setCurrentView("home");
     if (wsId) {
       setLoadedChats(prev => ({ ...prev, [wsId]: savedResult }));
     }
@@ -163,7 +196,7 @@ export default function App() {
       setResult(loadedChats[wsId]);
       setStatus("done");
       setElapsedTime("(restored)");
-      setCurrentView("dashboard");
+      setCurrentView("home");
       return;
     }
     setStatus("loading");
@@ -174,7 +207,7 @@ export default function App() {
       setResult(data);
       setStatus("done");
       setElapsedTime("(restored)");
-      setCurrentView("dashboard");
+      setCurrentView("home");
       if (data?.workspace_id) {
         setLoadedChats(prev => ({ ...prev, [data.workspace_id]: data }));
       }
@@ -219,8 +252,7 @@ export default function App() {
 
   const handleNavigate = (view) => {
     setCurrentView(view);
-    if (view === 'dashboard') {
-      setResult(null);
+    if (view === 'home' && !result) {
       if (status !== 'loading') {
         setStatus("idle");
       }
@@ -237,15 +269,8 @@ export default function App() {
           loadedChats={loadedChats} 
           onToggleSaveCache={handleToggleSaveCache} 
         />
-      ) : currentView === 'saved' ? (
-        <HistoryView 
-          onSelectItem={handleHistorySelect} 
-          loadedChats={loadedChats} 
-          onToggleSaveCache={handleToggleSaveCache} 
-          onlySaved={true} 
-        />
       ) : currentView === 'settings' ? (
-        <SettingsView />
+        <SettingsView theme={theme} onThemeChange={handleThemeChange} />
       ) : (
         <main className="flex-1 p-6 lg:p-10 min-w-0 font-sans bg-slate-50 dark:bg-[#0b0f19] transition-colors">
           {/* Dashboard Header */}
@@ -259,10 +284,10 @@ export default function App() {
               </div>
               <div>
                 <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white tracking-tight">
-                  {result ? "Workspace Detail" : "Builder Dashboard"}
+                  {currentView === 'dashboard' ? "Builder Dashboard" : (result ? "Workspace Detail" : "Insights Copilot")}
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
-                  {result ? `Analyzing: ${idea}` : "Juggling and executing your startup concepts"}
+                  {currentView === 'dashboard' ? "Juggling and executing your startup concepts" : (result ? `Analyzing: ${idea}` : "Pitch your startup idea and get instant agentic analysis")}
                 </p>
               </div>
             </div>
@@ -281,10 +306,14 @@ export default function App() {
               )}
               {result && (
                 <button
-                  onClick={() => handleNavigate('dashboard')}
+                  onClick={() => {
+                    setResult(null);
+                    setStatus("idle");
+                    setCurrentView("home");
+                  }}
                   className="px-3 py-1.5 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 transition-colors"
                 >
-                  Back to Dashboard
+                  New Pitch
                 </button>
               )}
               <span className="bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full">
@@ -336,7 +365,7 @@ export default function App() {
           )}
 
           {/* MAIN CANVAS VIEWS */}
-          {result ? (
+          {currentView === 'home' && result && (
             /* Workspace Detail View (4 Cards) */
             <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-6 items-start">
               <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={result?.workspace_id} onRefreshSuccess={handleRefreshResearch} />
@@ -344,8 +373,46 @@ export default function App() {
               <PlanCard status={status} roadmap={result?.plan?.roadmap} />
               <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} />
             </div>
-          ) : (
-            /* Dashboard Home view (No active workspace selected) */
+          )}
+
+          {currentView === 'home' && !result && (
+            /* Home Pitch view (Starting new analysis) */
+            <div className="space-y-10 max-w-4xl">
+              <section className="bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 lg:p-8 shadow-sm">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 21m0 0l-.813-5.096L9 21zm0 0h3.812m-3.812 0H5.188M9 10a4 4 0 118 0c0 1.947-.696 3.733-1.854 5.12L12 21h-3l2.854-5.88A7.994 7.994 0 019 10z" />
+                  </svg>
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Pitch a New Startup Idea</h2>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">
+                  Input a concept to invoke the 4-agent AI pipeline (Research → Planner → Critic → Mentor).
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <input
+                    type="text"
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm text-slate-700 dark:text-white bg-white dark:bg-[#0b0f19] transition-colors"
+                    placeholder="e.g. AI-based study buddy for students preparing for medical exams"
+                    value={idea}
+                    onChange={(e) => setIdea(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
+                    disabled={status === "loading"}
+                  />
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={status === "loading" || !idea.trim()}
+                    className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-md transition-all shrink-0"
+                  >
+                    {status === "loading" ? "Analyzing..." : "Analyze Idea"}
+                  </button>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {currentView === 'dashboard' && (
+            /* Dedicated Builder Dashboard View */
             <div className="space-y-10 max-w-7xl">
               {/* Builder Statistics Strips */}
               {!workspacesLoading && workspaces.length > 0 && (
@@ -386,7 +453,7 @@ export default function App() {
                 ) : workspaces.length === 0 ? (
                   <div className="bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center text-slate-500 max-w-4xl">
                     <p className="text-lg font-semibold">No active workspace designs yet.</p>
-                    <p className="text-sm mt-1">Submit your first startup idea below to kick off the pipeline analysis.</p>
+                    <p className="text-sm mt-1">Visit Home to pitch your first startup idea and kick off the pipeline analysis.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl">
@@ -452,7 +519,7 @@ export default function App() {
                             )}
                           </div>
 
-                          {/* 5. Contextual Telegram Connect Alert inside Continue cards */}
+                          {/* Telegram Connect button */}
                           {!ws.telegram_linked && ws.total_milestones > 0 && (
                             <div 
                               onClick={async (e) => {
@@ -477,38 +544,6 @@ export default function App() {
                     })}
                   </div>
                 )}
-              </section>
-
-              {/* 2. Pitch a New Startup Idea */}
-              <section className="bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 lg:p-8 max-w-4xl shadow-sm">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 21m0 0l-.813-5.096L9 21zm0 0h3.812m-3.812 0H5.188M9 10a4 4 0 118 0c0 1.947-.696 3.733-1.854 5.12L12 21h-3l2.854-5.88A7.994 7.994 0 019 10z" />
-                  </svg>
-                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Pitch a New Startup Idea</h2>
-                </div>
-                <p className="text-slate-500 dark:text-slate-400 mb-6">
-                  Input a concept to invoke the 4-agent AI pipeline (Research → Planner → Critic → Mentor).
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <input
-                    type="text"
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm text-slate-700 dark:text-white bg-white dark:bg-[#0b0f19] transition-colors"
-                    placeholder="e.g. AI-based study buddy for students preparing for medical exams"
-                    value={idea}
-                    onChange={(e) => setIdea(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-                    disabled={status === "loading"}
-                  />
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={status === "loading" || !idea.trim()}
-                    className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-md transition-all shrink-0"
-                  >
-                    {status === "loading" ? "Analyzing..." : "Analyze Idea"}
-                  </button>
-                </div>
               </section>
 
               {/* 4. Recent Mentor Dialogues */}
