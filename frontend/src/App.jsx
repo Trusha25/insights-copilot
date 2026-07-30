@@ -9,6 +9,8 @@ import HistoryView from './components/HistoryView';
 import LoginView from './components/LoginView';
 import SettingsView from './components/SettingsView';
 import FollowUpChat from './components/FollowUpChat';
+import LoadingDashboard from './components/LoadingDashboard';
+import WorkspaceDashboard from './components/WorkspaceDashboard';
 import { supabase } from './supabaseClient';
 
 export default function App() {
@@ -61,6 +63,8 @@ export default function App() {
   const [workspaces, setWorkspaces] = useState([]);
   const [workspacesLoading, setWorkspacesLoading] = useState(false);
   const [elapsedSecs, setElapsedSecs] = useState(0);
+  const [isDataReady, setIsDataReady] = useState(false);
+  const [pendingResult, setPendingResult] = useState(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -162,18 +166,27 @@ export default function App() {
     if (!idea.trim()) return;
     setStatus("loading");
     setResult(null);
+    setPendingResult(null);
+    setIsDataReady(false);
     setErrorMessage("");
     setCurrentView("home");
     try {
       const data = await analyzeIdea(idea);
-      setResult(data);
-      setStatus("done");
-      if (data?.workspace_id) {
-        setLoadedChats(prev => ({ ...prev, [data.workspace_id]: data }));
-      }
+      setPendingResult(data);
+      setIsDataReady(true);
     } catch (error) {
       setErrorMessage(error.message || "An unexpected error occurred.");
       setStatus("error");
+    }
+  };
+
+  const handleAnimationComplete = () => {
+    if (pendingResult) {
+      setResult(pendingResult);
+      setStatus("done");
+      if (pendingResult.workspace_id) {
+        setLoadedChats(prev => ({ ...prev, [pendingResult.workspace_id]: pendingResult }));
+      }
     }
   };
 
@@ -400,25 +413,40 @@ export default function App() {
 
           {/* MAIN CANVAS VIEWS */}
           {currentView === 'home' && result && (
-            /* Workspace Detail View (4 Cards + Follow Up Chat) */
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-6 items-start">
-                <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={result?.workspace_id} onRefreshSuccess={handleRefreshResearch} />
-                <ArchitectureCard status={status} plan={result?.plan} />
-                <PlanCard status={status} roadmap={result?.plan?.roadmap} />
-                <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} />
-              </div>
-              
-              <FollowUpChat 
-                workspaceId={result?.workspace_id} 
-                initialHistory={result?.chat_history || []} 
-                idea={idea}
-                primaryModel={primaryModel}
-              />
-            </div>
+            <WorkspaceDashboard
+              result={result}
+              idea={idea}
+              status={status}
+              newSourceUrls={newSourceUrls}
+              onRefreshResearch={handleRefreshResearch}
+              onToggleSaveActive={handleToggleSaveActive}
+              onEditIdea={() => {
+                setResult(null);
+                setStatus("idle");
+                setCurrentView("home");
+              }}
+              primaryModel={primaryModel}
+              onCancel={() => {
+                setResult(null);
+                setStatus("idle");
+                setCurrentView("home");
+              }}
+              setToastMessage={setToastMessage}
+            />
           )}
 
-          {currentView === 'home' && !result && (
+          {currentView === 'home' && !result && status === 'loading' ? (
+            <LoadingDashboard
+              idea={idea}
+              isDataReady={isDataReady}
+              onCancel={() => {
+                setStatus("idle");
+                setIsDataReady(false);
+                setPendingResult(null);
+              }}
+              onAnimationComplete={handleAnimationComplete}
+            />
+          ) : currentView === 'home' && !result ? (
             <>
               {/* Immersive Landing Page Header */}
               <div className="flex justify-between items-center w-full relative z-20 mb-8 select-none">
@@ -582,7 +610,7 @@ export default function App() {
                 <div className="absolute bottom-[-340px] left-1/2 -translate-x-1/2 w-[160%] h-[400px] rounded-full border-t border-[var(--color-border)] bg-[#020408]/95 shadow-[0_-15px_60px_rgba(223,197,143,0.06)]" />
               </div>
             </>
-          )}
+          ) : null}
 
           {currentView === 'dashboard' && (
             /* Dedicated Builder Dashboard View */
