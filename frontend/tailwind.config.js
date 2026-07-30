@@ -8,6 +8,13 @@ export default {
   theme: {
     extend: {
       colors: {
+        'accent-gold': 'var(--color-accent)',
+        'accent-gold-hover': 'var(--color-accent-hover)',
+        'accent-gold-bg': 'var(--color-accent-bg)',
+        'accent-gold-text': 'var(--color-accent-text)',
+        'theme-border': 'var(--color-border)',
+        'theme-border-hover': 'var(--color-border-hover)',
+        'theme-border-focus': 'var(--color-border-focus)',
         layer2: {
           bg: '#0B1226',
           surface: '#101A33',
