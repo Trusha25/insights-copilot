@@ -21,7 +21,7 @@ export default function DetailPanel({ title, children, onClose }) {
       ></div>
 
       {/* Panel container */}
-      <div className="relative flex flex-col w-full h-full bg-[var(--bg-surface)] border-l border-[var(--color-border)] shadow-2xl lg:h-[calc(100vh-80px)] lg:sticky lg:top-20">
+      <div className="relative flex flex-col w-full h-full bg-[var(--bg-surface)] shadow-[-4px_0_20px_rgba(0,0,0,0.3)] lg:h-[calc(100vh-80px)] lg:sticky lg:top-20">
         
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] shrink-0">

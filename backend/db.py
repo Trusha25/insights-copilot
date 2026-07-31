@@ -8,17 +8,22 @@ logger = logging.getLogger(__name__)
 
 def get_supabase() -> Client:
     url = os.environ.get("SUPABASE_URL", "").strip()
-    key = os.environ.get("SUPABASE_KEY", "").strip()
+    # Prefer service role key (bypasses RLS) for server-side operations;
+    # fall back to SUPABASE_KEY for backwards compat during transition.
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip() or os.environ.get("SUPABASE_KEY", "").strip()
     if not url or not key:
-        raise RuntimeError("SUPABASE_URL or SUPABASE_KEY environment variables are missing.")
+        raise RuntimeError("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables are missing.")
     return create_client(url, key)
 
 def init_db():
     url = os.environ.get("SUPABASE_URL", "").strip()
-    key = os.environ.get("SUPABASE_KEY", "").strip()
+    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    anon_key = os.environ.get("SUPABASE_KEY", "").strip()
+    key = service_key or anon_key
     if not url or not key:
-        raise RuntimeError("SUPABASE_URL or SUPABASE_KEY environment variables are missing. Startup halted.")
-    logger.info(f"Supabase configured pointing to {url}")
+        raise RuntimeError("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables are missing. Startup halted.")
+    key_type = "service_role" if service_key else "anon (WARNING: RLS will block writes)"
+    logger.info(f"Supabase configured pointing to {url} using {key_type} key")
 
 def save_history(idea: str, result: dict, user_id: str = None):
     try:
@@ -114,10 +119,9 @@ def create_workspace(workspace_id: str, idea: str, research: dict, plan: dict, u
             "idea": idea,
             "research_json": research_data,
             "plan_json": plan,
-            "is_saved": False
+            "is_saved": False,
+            "user_id": user_id
         }
-        if user_id:
-            payload["user_id"] = user_id
         supabase.table("workspaces").insert(payload).execute()
     except Exception as e:
         logger.error(f"Failed to create workspace in Supabase: {e}")
@@ -157,7 +161,8 @@ def get_workspace(workspace_id: str, user_id: str = None):
                 "plan": row["plan_json"],
                 "is_saved": row.get("is_saved", False),
                 "critique": critique,
-                "chat_history": chat_history
+                "chat_history": chat_history,
+                "tags": row.get("tags") or []
             }
         return None
     except Exception as e:
@@ -188,7 +193,8 @@ def get_workspace_by_idea(idea: str, user_id: str):
                 "plan": row["plan_json"],
                 "is_saved": row.get("is_saved", False),
                 "critique": critique,
-                "chat_history": chat_history
+                "chat_history": chat_history,
+                "tags": row.get("tags") or []
             }
         return None
     except Exception as e:
@@ -420,3 +426,74 @@ def update_workspace_chat_history(workspace_id: str, chat_history: list, user_id
     except Exception as e:
         logger.error(f"Failed to update chat history for workspace {workspace_id}: {e}")
         raise e
+
+def mark_milestone_complete(workspace_id: str, user_id: str = None) -> dict:
+    try:
+        supabase = get_supabase()
+        
+        query = supabase.table("workspaces").select("current_milestone_index, milestone_completions, plan_json").eq("id", workspace_id)
+        if user_id:
+            query = query.eq("user_id", user_id)
+        res = query.execute()
+        
+        if not res.data:
+            raise ValueError(f"Workspace {workspace_id} not found.")
+            
+        row = res.data[0]
+        current_index = row.get("current_milestone_index") or 0
+        milestone_completions = row.get("milestone_completions") or []
+        plan_json = row.get("plan_json") or {}
+        roadmap = plan_json.get("roadmap", [])
+        total_milestones = len(roadmap)
+        
+        if current_index >= total_milestones:
+            raise ValueError('All milestones already completed')
+            
+        from datetime import datetime, timezone
+        updated_list = list(milestone_completions)
+        updated_list.append({"index": current_index, "completed_at": datetime.now(timezone.utc).isoformat()})
+        
+        new_index = current_index + 1
+        
+        # update workspaces
+        update_ws_query = supabase.table("workspaces").update({
+            "current_milestone_index": new_index,
+            "milestone_completions": updated_list
+        }).eq("id", workspace_id)
+        if user_id:
+            update_ws_query = update_ws_query.eq("user_id", user_id)
+        update_ws_query.execute()
+        
+        # update telegram_links
+        try:
+            supabase.table("telegram_links").update({
+                "current_milestone_index": new_index
+            }).eq("workspace_id", workspace_id).execute()
+        except Exception as tel_err:
+            logger.warning(f"Failed to sync milestone to telegram link: {tel_err}")
+            
+        return {
+            "workspace_id": workspace_id,
+            "current_milestone_index": new_index,
+            "milestone_completions": updated_list,
+            "total_milestones": total_milestones
+        }
+    except Exception as e:
+        logger.error(f"Failed to mark milestone complete for workspace {workspace_id}: {e}")
+        raise e
+
+def get_all_workspaces_milestone_data(user_id: str) -> list[dict]:
+    try:
+        supabase = get_supabase()
+        res = supabase.table("workspaces").select("id, milestone_completions").eq("user_id", user_id).execute()
+        
+        result = []
+        for row in (res.data or []):
+            result.append({
+                "workspace_id": row["id"],
+                "milestone_completions": row.get("milestone_completions") or []
+            })
+        return result
+    except Exception as e:
+        logger.error(f"Failed to get milestone data for user {user_id}: {e}")
+        return []

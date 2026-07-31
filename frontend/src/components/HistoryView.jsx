@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchHistory, fetchHistoryItem, toggleSaveWorkspace } from '../api';
+import { fetchHistory, fetchHistoryItem, toggleSaveWorkspace, deleteWorkspace } from '../api';
 
 export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSaveCache }) {
   const [history, setHistory] = useState([]);
@@ -61,6 +61,22 @@ export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSa
       }
     } catch (err) {
       console.error('Failed to toggle save state', err);
+    }
+  };
+
+  const handleDelete = async (item, e) => {
+    e.stopPropagation();
+    const wsId = item.workspace_id;
+    if (!wsId) return;
+    
+    if (!window.confirm("Are you sure you want to delete this workspace? This cannot be undone.")) return;
+    
+    try {
+      await deleteWorkspace(wsId);
+      setHistory(prev => prev.filter(x => x.workspace_id !== wsId));
+    } catch (err) {
+      console.error('Failed to delete workspace', err);
+      alert('Failed to delete workspace');
     }
   };
 
@@ -158,6 +174,15 @@ export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSa
                 >
                   <svg className={`w-5 h-5 ${item.is_saved ? 'text-amber-500 fill-amber-500' : 'text-slate-300'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499c.158-.343.344-.66.52-.947.176.287.362.604.52.947l2.193 4.444a1 1 0 00.758.552l4.904.713c.38.055.53.518.257.788l-3.548 3.46a1 1 0 00-.287.885l.838 4.886c.065.378-.33.666-.67.487l-4.387-2.31a1 1 0 00-.93 0l-4.387 2.31c-.34.179-.735-.109-.67-.487l.838-4.886a1 1 0 00-.287-.885l-3.548-3.46c-.273-.27-.123-.733.257-.788l4.904-.713a1 1 0 00.758-.552l2.193-4.444z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={(e) => handleDelete(item, e)}
+                  className="p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                  title="Delete Workspace"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
                 {loadingId === item.id ? (

@@ -4,15 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 import httpx
-from agents import research_agent, planner_agent, critic_agent, mentor_agent, generate_founder_insight
+from agents import research_agent, planner_agent, critic_agent, mentor_agent, generate_founder_insight, compute_milestone_pace
 from db import (
     init_db, save_history, get_all_history_summaries, get_history_by_id, 
     create_workspace, get_workspace, update_workspace_research, 
     toggle_save_workspace, get_user_settings, update_user_settings,
     save_mentor_chat, get_telegram_link_by_workspace_id, get_workspace_by_idea,
-    update_workspace_chat_history, delete_workspace
+    update_workspace_chat_history, delete_workspace,
+    mark_milestone_complete, get_all_workspaces_milestone_data
 )
 import os
 import uuid
@@ -118,9 +119,12 @@ class MentorRequest(BaseModel):
     experience_level: str = "intermediate"
 
 class SettingsUpdate(BaseModel):
-    theme: str
-    primary_model: str = None
-    experience_level: str = None
+    theme: Optional[str] = None
+    primary_model: Optional[str] = None
+    experience_level: Optional[str] = None
+
+class TagsUpdate(BaseModel):
+    tags: List[str]
 
 class ChatPayload(BaseModel):
     message: str
@@ -201,6 +205,7 @@ async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_
             user_id=user_id,
             critique=critique
         )
+        logger.info(f"[DEBUG] Inserted workspace_id: {workspace_id} with user_id: {user_id}")
     except Exception as e:
         logger.error(f"Failed to create workspace: {e}")
 
@@ -232,7 +237,18 @@ def get_workspaces_endpoint(user_id: str = Depends(get_current_user_id)):
     try:
         from db import get_supabase
         supabase = get_supabase()
+        
+        # Diagnostic: check total rows and distinct user_ids in table
+        try:
+            all_res = supabase.table("workspaces").select("id, user_id, idea").execute()
+            all_rows = all_res.data or []
+            user_ids_found = set(r.get("user_id") for r in all_rows)
+            logger.info(f"[DIAG] Total workspace rows in table: {len(all_rows)}. Distinct user_ids: {user_ids_found}. Authenticated user_id: {user_id}")
+        except Exception as diag_err:
+            logger.warning(f"[DIAG] Failed diagnostic query: {diag_err}")
+        
         res = supabase.table("workspaces").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        logger.info(f"[DEBUG] get_workspaces_endpoint filtering by user_id: {user_id}. Rows returned: {len(res.data) if res.data else 0}")
         workspaces_data = []
         for row in (res.data or []):
             ws_id = row["id"]
@@ -266,36 +282,93 @@ def get_workspaces_endpoint(user_id: str = Depends(get_current_user_id)):
                 "total_milestones": total_milestones,
                 "next_step_title": next_step,
                 "telegram_linked": bool(link),
-                "latest_mentor": latest_mentor
+                "latest_mentor": latest_mentor,
+                "tags": row.get("tags") or []
             })
         return workspaces_data
     except Exception as e:
-        logger.error(f"Failed to fetch workspaces list: {e}")
+        logger.error(f"Failed to fetch workspaces: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/workspaces/{workspace_id}")
+def delete_workspace_endpoint(workspace_id: str, user_id: str = Depends(get_current_user_id)):
+    validate_uuid(workspace_id)
+    try:
+        delete_workspace(workspace_id, user_id)
+        return {"status": "success", "workspace_id": workspace_id}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to delete workspace: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/notifications")
 def get_notifications(user_id: str = Depends(get_current_user_id)):
-    from db import get_supabase
-    supabase = get_supabase()
-    res = supabase.table("workspaces").select("id, idea, plan_json, created_at").eq("user_id", user_id).order("created_at", desc=True).execute()
-    
-    notifications = []
-    for row in (res.data or []):
-        ws_id = row["id"]
-        link = get_telegram_link_by_workspace_id(ws_id)
-        plan_json = row.get("plan_json") or {}
-        roadmap = plan_json.get("roadmap", [])
+    try:
+        from db import get_supabase
+        supabase = get_supabase()
         
-        if len(roadmap) > 0 and not link:
-            notifications.append({
-                "type": "needs_telegram",
-                "workspace_id": ws_id,
-                "idea": row["idea"],
-                "message": f"Connect Telegram to track milestones for {row['idea']}",
-                "timestamp": row["created_at"]
-            })
+        # Try full query first; fall back to basic columns if newer columns are missing
+        try:
+            res = supabase.table("workspaces").select("id, idea, plan_json, created_at, current_milestone_index, milestone_completions, last_refresh_new_count, last_refresh_at").eq("user_id", user_id).order("created_at", desc=True).execute()
+        except Exception as query_err:
+            logger.warning(f"Full notifications query failed, falling back to basic columns: {query_err}")
+            res = supabase.table("workspaces").select("id, idea, plan_json, created_at").eq("user_id", user_id).order("created_at", desc=True).execute()
+        
+        notifications = []
+        for row in (res.data or []):
+            ws_id = row["id"]
+            link = get_telegram_link_by_workspace_id(ws_id)
+            plan_json = row.get("plan_json") or {}
+            roadmap = plan_json.get("roadmap", [])
             
-    return notifications[:4]
+            # Type 1: Missing Telegram link
+            if len(roadmap) > 0 and not link:
+                notifications.append({
+                    "type": "needs_telegram",
+                    "workspace_id": ws_id,
+                    "idea": row["idea"],
+                    "message": f"Connect Telegram to track milestones for '{row['idea']}'",
+                    "timestamp": row["created_at"]
+                })
+            
+            # Type 2: Stalled milestones (has completions but last one > 7 days ago)
+            completions = row.get("milestone_completions") or []
+            current_idx = row.get("current_milestone_index") or 0
+            if completions and current_idx < len(roadmap):
+                from datetime import datetime, timezone, timedelta
+                try:
+                    last_completed = completions[-1].get("completed_at", "")
+                    last_dt = datetime.fromisoformat(last_completed.replace("Z", "+00:00"))
+                    if datetime.now(timezone.utc) - last_dt > timedelta(days=7):
+                        days_stalled = (datetime.now(timezone.utc) - last_dt).days
+                        notifications.append({
+                            "type": "stalled_milestone",
+                            "workspace_id": ws_id,
+                            "idea": row["idea"],
+                            "message": f"Milestone {current_idx + 1} stalled for {days_stalled} days on '{row['idea']}'",
+                            "timestamp": last_completed
+                        })
+                except Exception:
+                    pass
+            
+            # Type 3: New sources from refresh
+            refresh_count = row.get("last_refresh_new_count") or 0
+            if refresh_count > 0:
+                notifications.append({
+                    "type": "new_sources",
+                    "workspace_id": ws_id,
+                    "idea": row["idea"],
+                    "message": f"{refresh_count} new source(s) found for '{row['idea']}'",
+                    "timestamp": row.get("last_refresh_at") or row["created_at"]
+                })
+                
+        # Sort by timestamp desc, cap at 5
+        notifications.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        return notifications[:5]
+    except Exception as e:
+        logger.error(f"Failed to fetch notifications: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/activity")
 def get_activity(user_id: str = Depends(get_current_user_id)):
@@ -370,6 +443,32 @@ def toggle_save(workspace_id: str, user_id: str = Depends(get_current_user_id)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/workspaces/{workspace_id}/complete-milestone")
+def complete_milestone(workspace_id: str, user_id: str = Depends(get_current_user_id)):
+    validate_uuid(workspace_id)
+    try:
+        result = mark_milestone_complete(workspace_id, user_id=user_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to complete milestone: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/api/workspaces/{workspace_id}/tags")
+def update_tags(workspace_id: str, payload: TagsUpdate, user_id: str = Depends(get_current_user_id)):
+    validate_uuid(workspace_id)
+    try:
+        from db import get_supabase
+        supabase = get_supabase()
+        res = supabase.table("workspaces").update({"tags": payload.tags}).eq("id", workspace_id).eq("user_id", user_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+        return {"status": "success", "tags": payload.tags}
+    except Exception as e:
+        logger.error(f"Failed to update tags: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/settings")
 def get_settings(user_id: str = Depends(get_current_user_id)):
     return get_user_settings(user_id)
@@ -409,6 +508,18 @@ async def refresh_workspace(workspace_id: str, user_id: str = Depends(get_curren
         new_sources_combined = new_web + new_github + new_apis
         
         update_workspace_research(workspace_id, new_research, user_id=user_id)
+        
+        # Persist refresh stats
+        try:
+            from datetime import datetime, timezone
+            from db import get_supabase
+            supabase_client = get_supabase()
+            supabase_client.table("workspaces").update({
+                "last_refresh_new_count": len(new_sources_combined),
+                "last_refresh_at": datetime.now(timezone.utc).isoformat()
+            }).eq("id", workspace_id).execute()
+        except Exception as persist_err:
+            logger.warning(f"Failed to persist refresh stats: {persist_err}")
         
         return {
             "research": new_research,
@@ -464,6 +575,22 @@ async def get_founder_profile(user_id: str = Depends(get_current_user_id)):
                 "research": research
             })
         result = await generate_founder_insight(workspace_summaries)
+        
+        # Add milestone pace
+        try:
+            milestone_data = get_all_workspaces_milestone_data(user_id)
+            all_completions = []
+            for md in milestone_data:
+                all_completions.append({
+                    "workspace_id": md["workspace_id"],
+                    "completions": md["milestone_completions"] or []
+                })
+            pace = compute_milestone_pace(all_completions)
+            result["milestone_pace"] = pace
+        except Exception as pace_err:
+            logger.warning(f"Failed to compute milestone pace: {pace_err}")
+            result["milestone_pace"] = None
+            
         return result
     except Exception as e:
         logger.error(f"Failed to generate founder profile: {e}")

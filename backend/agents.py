@@ -337,16 +337,16 @@ Search Results: {json.dumps(all_results)}
 
 Generate JSON:
 {{
-  "problem_validation": "string, 2-3 sentences, with [n] citations",
-  "market_research_summary": "string, 3-5 sentences, with [n] citations",
+  "problem_validation": "string, 4-6 detailed, intellectual sentences deeply analyzing the problem space with [n] citations",
+  "market_research_summary": "string, 6-8 sentences offering a comprehensive and intellectual market analysis with [n] citations",
   "existing_solutions": [
-    {{ "name": "string", "description": "string, 1 sentence — what it does + why it doesn't fully address this idea, with [n] citation", "gap": "string, 1 sentence" }}
+    {{ "name": "string", "description": "string, 2-3 sentences — intellectual analysis of what it does + why it falls short, with [n] citation", "gap": "string, 1 sentence" }}
   ],
   "research_gaps": [
-    {{ "gap": "string, 1 sentence describing an unresolved problem from academic literature", "citation": "[n]" }}
+    {{ "gap": "string, 1-2 sentences describing an unresolved problem from academic literature in high detail", "citation": "[n]" }}
   ],
   "innovation_opportunities": [
-    {{ "approach": "string, 1 sentence — a specific method or technique", "addresses": "string — which research_gap or existing_solution gap this responds to" }}
+    {{ "approach": "string, 1-2 sentences — a specific, highly intellectual method or technique", "addresses": "string — which research_gap or existing_solution gap this responds to" }}
   ],
   "sources": [
     {{ "title": "string", "url": "string", "source_type": "web | github | arxiv | semantic_scholar" }}
@@ -408,6 +408,7 @@ async def planner_agent(idea: str, research: dict) -> dict:
             "a specific named item from the Research JSON below (an exact repo name, paper title, API name, or dataset) — "
             "not a paraphrase, the literal name. If Research contains fewer than 3 usable items, state in that task's "
             "rationale that no verified source exists and flag it as an assumption.\n"
+            "6. COMPREHENSIVE 5-8 PHASE ROADMAP: You MUST generate exactly 5 to 8 phases. Each phase milestone name must explicitly list the exact product features being built in that phase (e.g. 'Phase 3: Core Features & Scope (Study Plan, Quizzes, Analytics)'). DO NOT output only 2 or 3 phases. DO NOT output vague milestone names like 'Develop Interface'.\n"
         )
 
         few_shot_examples = """
@@ -560,13 +561,13 @@ JSON Schema:
   ],
   "roadmap": [
     {{
-      "milestone": "string - non-generic milestone name representing the engineering challenge",
-      "duration": "string - e.g. '4 days'",
+      "milestone": "string - e.g., 'Phase 2: Core Features (Study Plan, Quizzes, Tracking)'. MUST generate exactly 5 to 8 distinct phases, heavily specifying exact application features.",
+      "duration": "string - e.g. '2 weeks'",
       "tasks": [
         {{
           "title": "string - concrete task title",
-          "description": "string - technical action detail",
-          "rationale": "string - why this task exists and its contribution to the specific project"
+          "description": "string - highly detailed and intellectual technical action plan (3-5 sentences) as if architected by a senior staff engineer",
+          "rationale": "string - deep technical rationale and justification (2-4 sentences) explaining why this is the optimal approach"
         }}
       ]
     }}
@@ -683,6 +684,38 @@ Generate JSON:
         logger.error(f"Failed mentor_agent: {e}")
         return fallback
 
+def compute_milestone_pace(all_completions: list[dict]) -> dict:
+    try:
+        pool_deltas = []
+        qualifying_workspace_count = 0
+        
+        for ws in all_completions:
+            completions = ws.get("completions", [])
+            if len(completions) >= 2:
+                # Ensure sorted by completed_at
+                completions_sorted = sorted(
+                    completions,
+                    key=lambda x: datetime.fromisoformat(x["completed_at"].replace("Z", "+00:00"))
+                )
+                
+                qualifying_workspace_count += 1
+                for i in range(1, len(completions_sorted)):
+                    prev_ts = datetime.fromisoformat(completions_sorted[i-1]["completed_at"].replace("Z", "+00:00"))
+                    curr_ts = datetime.fromisoformat(completions_sorted[i]["completed_at"].replace("Z", "+00:00"))
+                    delta_days = (curr_ts - prev_ts).total_seconds() / (24 * 3600)
+                    pool_deltas.append(delta_days)
+                    
+        if not pool_deltas:
+            return {"avg_days": None, "label": "Not enough data", "workspace_count": 0}
+            
+        avg_days = sum(pool_deltas) / len(pool_deltas)
+        avg_days = round(avg_days, 1)
+        
+        return {"avg_days": avg_days, "label": f"{avg_days} days per milestone", "workspace_count": qualifying_workspace_count}
+    except Exception as e:
+        logger.error(f"Failed to compute milestone pace: {e}")
+        return {"avg_days": None, "label": "Not enough data", "workspace_count": 0}
+
 async def generate_founder_insight(workspace_summaries: list[dict]) -> dict:
     logger.info("Starting generate_founder_insight")
     if len(workspace_summaries) < 2:
@@ -693,6 +726,7 @@ async def generate_founder_insight(workspace_summaries: list[dict]) -> dict:
     scores = []
     weak_criteria = []
     tech_stacks = []
+    risk_dist = {"low": 0, "medium": 0, "high": 0}
     
     for w in workspace_summaries:
         # Score calculation matching WorkspaceDashboard.jsx
@@ -717,6 +751,16 @@ async def generate_founder_insight(workspace_summaries: list[dict]) -> dict:
         for k, v in criteria.items():
             if isinstance(v, dict) and not v.get("pass"):
                 weak_criteria.append(k)
+                
+        # Risk calculation
+        flagged_issues = w.get("critique", {}).get("flagged_issues", [])
+        flagged_count = len(flagged_issues)
+        if flagged_count == 0:
+            risk_dist["low"] += 1
+        elif flagged_count <= 2:
+            risk_dist["medium"] += 1
+        else:
+            risk_dist["high"] += 1
                 
         # Tech stack
         tech_stacks.extend(w.get("plan", {}).get("tech_stack", []))
@@ -761,6 +805,7 @@ Generate JSON:
         result["avg_score"] = avg_score
         result["most_common_weak_criterion"] = most_common_weak_criterion
         result["most_common_tech_stack"] = most_common_tech_stack
+        result["risk_distribution"] = risk_dist
         logger.info("Successfully completed generate_founder_insight")
         return result
     except Exception as e:

@@ -5,6 +5,7 @@ import PlanCard from './PlanCard';
 import ResourcesCard from './ResourcesCard';
 import FollowUpChat from './FollowUpChat';
 import DetailPanel from './DetailPanel';
+import { updateWorkspaceTags } from '../api';
 
 export default function WorkspaceDashboard({
   result,
@@ -17,7 +18,9 @@ export default function WorkspaceDashboard({
   primaryModel,
   experienceLevel,
   onCancel,
-  setToastMessage
+  setToastMessage,
+  onMilestoneComplete,
+  milestoneCompleting
 }) {
   const [expanded, setExpanded] = useState({
     techAnalysis: true,
@@ -37,6 +40,52 @@ export default function WorkspaceDashboard({
 
   const toggleSection = (key) => {
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const [tags, setTags] = useState(result?.tags || []);
+  const [tagInput, setTagInput] = useState('');
+  const [isUpdatingTags, setIsUpdatingTags] = useState(false);
+
+  const handleTagAdd = async (e) => {
+    if (e.key === 'Enter' && tagInput.trim()) {
+      const newTag = tagInput.trim();
+      if (!tags.includes(newTag)) {
+        const newTags = [...tags, newTag];
+        setTags(newTags);
+        setTagInput('');
+        try {
+          setIsUpdatingTags(true);
+          await updateWorkspaceTags(result.workspace_id, newTags);
+        } catch (err) {
+          console.error("Failed to add tag", err);
+          setTags(tags); // revert
+          if (setToastMessage) {
+            setToastMessage("Failed to save tag");
+            setTimeout(() => setToastMessage(""), 3000);
+          }
+        } finally {
+          setIsUpdatingTags(false);
+        }
+      }
+    }
+  };
+
+  const handleTagRemove = async (tagToRemove) => {
+    const newTags = tags.filter(t => t !== tagToRemove);
+    setTags(newTags);
+    try {
+      setIsUpdatingTags(true);
+      await updateWorkspaceTags(result.workspace_id, newTags);
+    } catch (err) {
+      console.error("Failed to remove tag", err);
+      setTags(tags); // revert
+      if (setToastMessage) {
+        setToastMessage("Failed to remove tag");
+        setTimeout(() => setToastMessage(""), 3000);
+      }
+    } finally {
+      setIsUpdatingTags(false);
+    }
   };
 
   const workspaceId = result?.workspace_id;
@@ -78,7 +127,199 @@ export default function WorkspaceDashboard({
   };
 
   const handleExport = () => {
-    window.print();
+    // Build a comprehensive report in a new window
+    const research = result?.research || {};
+    const plan = result?.plan || {};
+    const critique = result?.critique || {};
+    const roadmap = plan?.roadmap || [];
+    const techStack = plan?.tech_stack || [];
+    const components = plan?.architecture_components || [];
+    const sources = research?.sources || [];
+    const githubRepos = research?.github_repos || [];
+    const apisDatasets = research?.apis_datasets || [];
+
+    const reportHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${idea} — Full Analysis Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #fff; color: #1a1a2e; padding: 48px; line-height: 1.7; max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 28px; font-weight: 800; margin-bottom: 6px; color: #0f0f23; }
+    h2 { font-size: 20px; font-weight: 700; margin: 36px 0 14px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; color: #1a1a2e; }
+    h3 { font-size: 16px; font-weight: 700; margin: 20px 0 8px; color: #374151; }
+    p, li { font-size: 14px; color: #4b5563; }
+    .subtitle { font-size: 13px; color: #9ca3af; margin-bottom: 24px; }
+    .score-row { display: flex; gap: 24px; margin: 16px 0 28px; flex-wrap: wrap; }
+    .score-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 20px; min-width: 160px; flex: 1; }
+    .score-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; font-weight: 600; }
+    .score-card .value { font-size: 28px; font-weight: 800; color: #1a1a2e; margin-top: 4px; }
+    .section-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 12px 0; }
+    .section-card h4 { font-size: 15px; font-weight: 700; color: #1f2937; margin-bottom: 6px; }
+    .section-card p { font-size: 13px; color: #6b7280; }
+    .badge { display: inline-block; background: #eef2ff; color: #4338ca; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 3px 4px 3px 0; }
+    .badge-green { background: #ecfdf5; color: #059669; }
+    .badge-red { background: #fef2f2; color: #dc2626; }
+    ul { padding-left: 20px; margin: 8px 0; }
+    li { margin-bottom: 6px; }
+    .roadmap-phase { border-left: 3px solid #6366f1; padding: 16px 0 16px 20px; margin: 12px 0; }
+    .roadmap-phase .phase-title { font-size: 16px; font-weight: 700; color: #1f2937; }
+    .roadmap-phase .phase-duration { font-size: 12px; color: #6366f1; font-weight: 600; margin-bottom: 10px; }
+    .task-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin: 8px 0; }
+    .task-item h5 { font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
+    .task-item .desc { font-size: 13px; color: #4b5563; }
+    .task-item .rationale { font-size: 12px; color: #6366f1; margin-top: 8px; padding: 8px 12px; background: #eef2ff; border-radius: 6px; }
+    .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+    .tech-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+    .tech-item .name { font-weight: 700; color: #1f2937; font-size: 14px; }
+    .tech-item .reason { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .source-link { color: #4338ca; text-decoration: none; font-size: 13px; }
+    .source-link:hover { text-decoration: underline; }
+    .footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #9ca3af; }
+    @media print { body { padding: 24px; } }
+  </style>
+</head>
+<body>
+  <h1>${idea}</h1>
+  <p class="subtitle">Full Analysis Report • Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} • Insights Copilot</p>
+
+  <!-- Score Overview -->
+  <div class="score-row">
+    <div class="score-card"><div class="label">Startup Score</div><div class="value">${startupScore}%</div></div>
+    <div class="score-card"><div class="label">Market Potential</div><div class="value">${marketPotential}%</div></div>
+    <div class="score-card"><div class="label">Tech Feasibility</div><div class="value">${technicalFeasibility}%</div></div>
+    <div class="score-card"><div class="label">Business Viability</div><div class="value">${businessViability}%</div></div>
+    <div class="score-card"><div class="label">Risk Level</div><div class="value">${riskLevel}</div></div>
+  </div>
+
+  <!-- Verdict -->
+  <h2>Verdict: ${getVerdictLabel()}</h2>
+  <p>${getVerdictText()}</p>
+
+  <!-- Problem Validation -->
+  <h2>Problem Validation</h2>
+  <p>${research.problem_validation || 'N/A'}</p>
+
+  <!-- Market Research -->
+  <h2>Market Research Summary</h2>
+  <p>${research.market_research_summary || 'N/A'}</p>
+
+  <!-- Existing Solutions -->
+  ${research.existing_solutions && research.existing_solutions.length > 0 ? `
+  <h2>Existing Solutions</h2>
+  ${research.existing_solutions.map(s => `
+    <div class="section-card">
+      <h4>${s.name || 'Unknown'}</h4>
+      <p>${s.description || ''}</p>
+      ${s.gap ? `<p style="margin-top:6px;color:#dc2626;font-size:12px;font-weight:600;">Gap: ${s.gap}</p>` : ''}
+    </div>
+  `).join('')}` : ''}
+
+  <!-- Research Gaps -->
+  ${research.research_gaps && research.research_gaps.length > 0 ? `
+  <h2>Research Gaps</h2>
+  <ul>${research.research_gaps.map(g => `<li>${typeof g === 'string' ? g : g.gap || ''} ${g.citation || ''}</li>`).join('')}</ul>
+  ` : ''}
+
+  <!-- Innovation Opportunities -->
+  ${research.innovation_opportunities && research.innovation_opportunities.length > 0 ? `
+  <h2>Innovation Opportunities</h2>
+  ${research.innovation_opportunities.map(o => `
+    <div class="section-card">
+      <p><strong>Approach:</strong> ${o.approach || ''}</p>
+      <p style="font-size:12px;color:#6366f1;margin-top:4px;">Addresses: ${o.addresses || ''}</p>
+    </div>
+  `).join('')}` : ''}
+
+  <!-- Critique -->
+  <h2>Technical Critique</h2>
+  <p><strong>Overall Verdict:</strong> <span class="badge ${critique.overall_verdict === 'ready' ? 'badge-green' : 'badge-red'}">${critique.overall_verdict || 'N/A'}</span></p>
+  ${Object.entries(critique.criteria || {}).map(([key, val]) => `
+    <div class="section-card">
+      <h4>${key.charAt(0).toUpperCase() + key.slice(1)} <span class="badge ${val?.pass ? 'badge-green' : 'badge-red'}">${val?.pass ? 'PASS' : 'FAIL'}</span></h4>
+      <p>${val?.note || ''}</p>
+    </div>
+  `).join('')}
+  ${critique.flagged_issues && critique.flagged_issues.length > 0 ? `<h3>Flagged Issues</h3><ul>${critique.flagged_issues.map(i => `<li>${i}</li>`).join('')}</ul>` : ''}
+  ${critique.suggested_fixes && critique.suggested_fixes.length > 0 ? `<h3>Suggested Fixes</h3><ul>${critique.suggested_fixes.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}
+
+  <!-- Architecture -->
+  <h2>Architecture Overview</h2>
+  <p>${plan.architecture || 'N/A'}</p>
+
+  <!-- Tech Stack -->
+  ${techStack.length > 0 ? `
+  <h2>Recommended Tech Stack</h2>
+  <div class="tech-grid">
+    ${techStack.map(tech => {
+      const parts = tech.split(/[:-]/);
+      const name = parts[0].trim();
+      const reason = parts.slice(1).join('-').trim();
+      return `<div class="tech-item"><div class="name">${name}</div>${reason ? `<div class="reason">${reason}</div>` : ''}</div>`;
+    }).join('')}
+  </div>` : ''}
+
+  <!-- Architecture Components -->
+  ${components.length > 0 ? `
+  <h2>Core Components & Services</h2>
+  ${components.map(c => `
+    <div class="section-card">
+      <h4>${c.component} <span class="badge">${c.technology}</span></h4>
+      <p>${c.rationale || ''}</p>
+    </div>
+  `).join('')}` : ''}
+
+  <!-- Roadmap -->
+  ${roadmap.length > 0 ? `
+  <h2>Execution Roadmap</h2>
+  ${roadmap.map((phase, i) => `
+    <div class="roadmap-phase">
+      <div class="phase-duration">Phase ${i + 1} • ${phase.duration || ''}</div>
+      <div class="phase-title">${phase.milestone}</div>
+      ${phase.tasks && phase.tasks.length > 0 ? phase.tasks.map(task => `
+        <div class="task-item">
+          <h5>${typeof task === 'string' ? task : task.title || ''}</h5>
+          ${typeof task !== 'string' && task.description ? `<div class="desc">${task.description}</div>` : ''}
+          ${typeof task !== 'string' && task.rationale ? `<div class="rationale">${task.rationale}</div>` : ''}
+        </div>
+      `).join('') : `<p>${phase.description || 'No tasks specified.'}</p>`}
+    </div>
+  `).join('')}` : ''}
+
+  <!-- Sources -->
+  ${sources.length > 0 ? `
+  <h2>Sources & References</h2>
+  <ul>${sources.map((s, i) => `<li>[${i + 1}] <a class="source-link" href="${s.url}" target="_blank">${s.title || s.url}</a> <span class="badge">${s.source_type || 'web'}</span></li>`).join('')}</ul>
+  ` : ''}
+
+  <!-- GitHub Repos -->
+  ${githubRepos.length > 0 ? `
+  <h3>GitHub Repositories</h3>
+  <ul>${githubRepos.map(r => `<li><a class="source-link" href="${r.url}" target="_blank">${r.name}</a> — ${r.why_relevant || ''}</li>`).join('')}</ul>
+  ` : ''}
+
+  <!-- APIs & Datasets -->
+  ${apisDatasets.length > 0 ? `
+  <h3>APIs & Datasets</h3>
+  <ul>${apisDatasets.map(a => `<li><a class="source-link" href="${a.url}" target="_blank">${a.name}</a> <span class="badge">${a.type || ''}</span></li>`).join('')}</ul>
+  ` : ''}
+
+  <div class="footer">Generated by Insights Copilot • ${new Date().toISOString()}</div>
+</body>
+</html>`;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(reportHTML);
+      printWindow.document.close();
+      // Auto-trigger print dialog after content loads
+      printWindow.onload = () => {
+        setTimeout(() => printWindow.print(), 500);
+      };
+    }
   };
 
   const getVerdictLabel = () => {
@@ -100,7 +341,7 @@ export default function WorkspaceDashboard({
   return (
     <div className="flex flex-row w-full items-start">
       {/* Main Content Dashboard */}
-      <div className={`flex-1 flex flex-col gap-8 font-sans max-w-7xl mx-auto w-full select-none print:p-0 transition-all duration-300 ${activePanel ? 'hidden lg:flex' : ''}`}>
+      <div className={`flex-1 flex flex-col gap-8 font-sans w-full max-w-full mx-auto select-none print:p-0 transition-all duration-300 ${activePanel ? 'hidden lg:flex overflow-hidden' : ''}`}>
       
       {/* Header bar actions */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-border)] pb-5 shrink-0 print:hidden">
@@ -134,6 +375,25 @@ export default function WorkspaceDashboard({
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>Analysis completed • Just now</span>
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {tags.map(tag => (
+              <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                {tag}
+                <button onClick={() => handleTagRemove(tag)} disabled={isUpdatingTags} className="text-slate-400 hover:text-red-500 ml-1 focus:outline-none">
+                  &times;
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleTagAdd}
+              disabled={isUpdatingTags}
+              placeholder="Add tag..."
+              className="px-2.5 py-1 rounded-full bg-transparent border border-dashed border-slate-300 dark:border-slate-700 text-xs font-medium focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 w-24 text-slate-700 dark:text-white"
+            />
+          </div>
         </div>
 
         {/* Action Row */}
@@ -483,7 +743,7 @@ export default function WorkspaceDashboard({
 
             {expanded.roadmap && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
-                <PlanCard status={status} roadmap={result?.plan?.roadmap} openPanel={openPanel} />
+                <PlanCard status={status} roadmap={result?.plan?.roadmap} plan={result?.plan} openPanel={openPanel} currentMilestoneIndex={result?.current_milestone_index || 0} onMilestoneComplete={onMilestoneComplete} milestoneCompleting={milestoneCompleting} />
               </div>
             )}
           </div>

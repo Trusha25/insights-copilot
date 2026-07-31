@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { analyzeIdea, toggleSaveWorkspace, fetchSettings, saveSettings, fetchHistoryItem, fetchWorkspaces, fetchTelegramLink, fetchFounderProfile, getNotifications, getActivity } from './api';
+import { analyzeIdea, toggleSaveWorkspace, fetchSettings, saveSettings, fetchHistoryItem, fetchWorkspaces, fetchTelegramLink, fetchFounderProfile, getNotifications, getActivity, completeMilestone } from './api';
 import Sidebar from './components/Sidebar';
 import ResearchCard from './components/ResearchCard';
 import PlanCard from './components/PlanCard';
@@ -28,7 +28,8 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="p-8 text-center text-red-500 max-w-2xl mx-auto mt-20 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-2xl">
-          <h2 className="text-xl font-bold mb-4">Something broke while rendering: {this.state.error.message}</h2>
+          <h2 className="text-xl font-bold mb-4">Something broke while rendering: {this.state.error?.message || String(this.state.error)}</h2>
+          <pre className="text-left text-xs bg-red-900/10 p-4 rounded-lg overflow-auto mb-4 border border-red-900/20">{this.state.error?.stack}</pre>
           <button 
             onClick={() => window.location.reload()} 
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold cursor-pointer"
@@ -108,6 +109,9 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
   const [activity, setActivity] = useState([]);
   const [isFounderProfileExpanded, setIsFounderProfileExpanded] = useState(false);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [milestoneCompleting, setMilestoneCompleting] = useState(false);
+  const [selectedTag, setSelectedTag] = useState(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -193,8 +197,22 @@ export default function App() {
     }
   };
 
+  const handleMilestoneComplete = async (workspaceId) => {
+    setMilestoneCompleting(true);
+    try {
+      await completeMilestone(workspaceId);
+      await loadWorkspaces(); // Refresh workspaces to get new milestone progress
+    } catch (e) {
+      console.error("Failed to complete milestone:", e);
+      setToastMessage(e.message || "Failed to complete milestone");
+      setTimeout(() => setToastMessage(""), 3000);
+    } finally {
+      setMilestoneCompleting(false);
+    }
+  };
+
   useEffect(() => {
-    if (session && currentView === 'dashboard' && !result) {
+    if (session && (currentView === 'dashboard' || currentView === 'home') && !result) {
       loadWorkspaces();
     }
   }, [session, currentView, result]);
@@ -495,6 +513,8 @@ export default function App() {
                 setCurrentView("home");
               }}
               setToastMessage={setToastMessage}
+              onMilestoneComplete={() => handleMilestoneComplete(result.workspace_id)}
+              milestoneCompleting={milestoneCompleting}
             />
           )}
 
@@ -525,12 +545,50 @@ export default function App() {
                     <span className="font-extrabold tracking-tight">12,450</span>
                   </div>
                   {/* Notification Bell */}
-                  <button className="relative p-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-xl text-slate-400 hover:text-slate-200 transition-colors shadow-sm backdrop-blur-md cursor-pointer">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
-                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full animate-pulse"></span>
-                  </button>
+                  <div className="relative z-50">
+                    <button 
+                      onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+                      className="relative p-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-xl text-slate-400 hover:text-slate-200 transition-colors shadow-sm backdrop-blur-md cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      {notifications.length > 0 && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">{notifications.length}</span>
+                      )}
+                    </button>
+                    {notifDropdownOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-80 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
+                        <div className="p-3 border-b border-[var(--color-border)] flex items-center justify-between">
+                          <h4 className="text-sm font-bold text-white">Notifications</h4>
+                          <button onClick={() => setNotifDropdownOpen(false)} className="text-slate-500 hover:text-white transition-colors cursor-pointer">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {notifications.length > 0 ? notifications.slice(0, 5).map((notif, i) => (
+                            <div key={i} className="p-4 border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-accent-bg)]/10 transition-colors cursor-pointer" onClick={() => { setNotifDropdownOpen(false); }}>
+                              <div className="flex items-start gap-3">
+                                <span className="mt-0.5 shrink-0 text-lg">
+                                  {notif.type === 'needs_telegram' && '📱'}
+                                  {notif.type === 'stalled_milestone' && '⏳'}
+                                  {notif.type === 'new_sources' && '🔍'}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold text-white truncate">{notif.idea}</p>
+                                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">{notif.message}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )) : (
+                            <div className="p-6 text-center">
+                              <p className="text-sm text-slate-500">All caught up! 🎉</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -678,6 +736,58 @@ export default function App() {
           {currentView === 'dashboard' && (
             /* Dedicated Builder Dashboard View */
             <div className="space-y-8 w-full">
+              {/* Dashboard Header */}
+              <div className="flex justify-between items-center w-full mb-2 select-none">
+                <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Builder Dashboard</h1>
+                <div className="flex items-center gap-3">
+                  {/* Notification Bell */}
+                  <div className="relative z-50">
+                    <button 
+                      onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+                      className="relative p-2 bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shadow-sm cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      {notifications.length > 0 && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">{notifications.length}</span>
+                      )}
+                    </button>
+                    {notifDropdownOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-[100]">
+                        <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-white">Notifications</h4>
+                          <button onClick={() => setNotifDropdownOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {notifications.length > 0 ? notifications.slice(0, 5).map((notif, i) => (
+                            <div key={i} className="p-4 border-b border-slate-100 dark:border-slate-800/50 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => { setNotifDropdownOpen(false); }}>
+                              <div className="flex items-start gap-3">
+                                <span className="mt-0.5 shrink-0 text-lg">
+                                  {notif.type === 'needs_telegram' && '📱'}
+                                  {notif.type === 'stalled_milestone' && '⏳'}
+                                  {notif.type === 'new_sources' && '🔍'}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold text-slate-800 dark:text-white truncate">{notif.idea}</p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{notif.message}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )) : (
+                            <div className="p-6 text-center">
+                              <p className="text-sm text-slate-500">All caught up! 🎉</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Stats Strip */}
               {!workspacesLoading && workspaces.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -767,6 +877,11 @@ export default function App() {
                       <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 pt-3 border-t border-slate-200 dark:border-slate-800">
                         → {founderProfile.suggested_focus}
                       </p>
+                      {founderProfile.milestone_pace?.avg_days !== null && founderProfile.milestone_pace?.avg_days !== undefined && (
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 font-semibold">
+                          ⚡ Milestone pace: {founderProfile.milestone_pace.label} (avg {founderProfile.milestone_pace.avg_days}d across {founderProfile.milestone_pace.workspace_count} project{founderProfile.milestone_pace.workspace_count !== 1 ? 's' : ''})
+                        </p>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -780,6 +895,9 @@ export default function App() {
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mt-1">
                           <span className="text-red-500 dark:text-red-400">Weakest: <span className="font-medium lowercase">{founderProfile.most_common_weak_criterion}</span></span>
                           <span className="text-blue-600 dark:text-blue-400">Top stack: <span className="font-medium lowercase">{(founderProfile.most_common_tech_stack || []).slice(0, 2).map(t => t.split(' - ')[0]).join(', ')}</span></span>
+                          {founderProfile.milestone_pace?.avg_days !== null && founderProfile.milestone_pace?.avg_days !== undefined && (
+                            <span className="text-emerald-500 dark:text-emerald-400">Pace: <span className="font-medium">{founderProfile.milestone_pace.avg_days}d/m</span></span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -797,9 +915,55 @@ export default function App() {
                 </div>
               ) : null}
 
+              {/* Portfolio Risk Chart */}
+              {founderProfile && !founderProfile.insufficient_data && workspaces.length >= 2 && founderProfile.risk_distribution && (
+                <div className="bg-white dark:bg-[#111827]/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm mt-4">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3">Portfolio Risk Distribution</h3>
+                  <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
+                    {founderProfile.risk_distribution.low > 0 && (
+                      <div className="h-full bg-emerald-500" style={{ width: `${(founderProfile.risk_distribution.low / workspaces.length) * 100}%` }}></div>
+                    )}
+                    {founderProfile.risk_distribution.medium > 0 && (
+                      <div className="h-full bg-amber-500" style={{ width: `${(founderProfile.risk_distribution.medium / workspaces.length) * 100}%` }}></div>
+                    )}
+                    {founderProfile.risk_distribution.high > 0 && (
+                      <div className="h-full bg-red-500" style={{ width: `${(founderProfile.risk_distribution.high / workspaces.length) * 100}%` }}></div>
+                    )}
+                  </div>
+                  <p className="text-xs text-center font-medium text-slate-500 dark:text-slate-400 mt-2">
+                    <span className="text-emerald-500 dark:text-emerald-400 font-bold">{founderProfile.risk_distribution.low}</span> Low &middot; <span className="text-amber-500 dark:text-amber-400 font-bold">{founderProfile.risk_distribution.medium}</span> Medium &middot; <span className="text-red-500 dark:text-red-400 font-bold">{founderProfile.risk_distribution.high}</span> High
+                  </p>
+                </div>
+              )}
+
               {/* Continue Where You Left Off */}
               <section>
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Continue where you left off</h2>
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Continue where you left off</h2>
+                  
+                  {(() => {
+                    const allTags = Array.from(new Set(workspaces.flatMap(ws => ws.tags || []))).sort();
+                    if (allTags.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-slate-500 mr-1">Filter:</span>
+                        {allTags.map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-colors border ${
+                              selectedTag === tag
+                                ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+                                : 'bg-white dark:bg-[#111827]/70 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 {workspacesLoading ? (
                   <div className="flex items-center gap-2 text-slate-500">
@@ -813,7 +977,7 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {workspaces.map(ws => {
+                    {workspaces.filter(ws => !selectedTag || (ws.tags && ws.tags.includes(selectedTag))).map(ws => {
                       const progressPercentage = ws.total_milestones > 0 
                         ? (ws.current_milestone_index / ws.total_milestones) * 100 
                         : 0;

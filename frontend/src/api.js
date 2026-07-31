@@ -81,6 +81,27 @@ export async function toggleSaveWorkspace(workspaceId) {
   return await response.json();
 }
 
+export async function updateWorkspaceTags(workspaceId, tags) {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/workspaces/${workspaceId}/tags`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ tags }),
+  });
+  if (!response.ok) throw new Error('Failed to update workspace tags');
+  return await response.json();
+}
+
+export async function deleteWorkspace(workspaceId) {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/workspaces/${workspaceId}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to delete workspace');
+  return await response.json();
+}
+
 export async function fetchSettings() {
   const headers = await getHeaders();
   const response = await fetch(`${BASE_URL}/api/settings`, {
@@ -167,6 +188,19 @@ export async function sendChatMessage(workspaceId, message) {
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
     throw new Error(errorBody.detail || `Server returned status ${response.status}`);
+  }
+  return await response.json();
+}
+
+export async function completeMilestone(workspaceId) {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/workspaces/${workspaceId}/complete-milestone`, {
+    method: 'POST',
+    headers,
+  });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.detail || 'Failed to complete milestone');
   }
   return await response.json();
 }

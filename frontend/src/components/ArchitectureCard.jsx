@@ -60,12 +60,21 @@ export default function ArchitectureCard({ status, plan, openPanel }) {
             onClick={() => openPanel("Recommended Tech Stack", (
               <>
                 {plan.tech_stack && plan.tech_stack.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {plan.tech_stack.map((tech, idx) => (
-                      <span key={idx} className="theme-badge py-2 px-4 rounded-lg text-base font-medium">
-                        {tech}
-                      </span>
-                    ))}
+                  <div className="flex flex-col gap-4">
+                    {plan.tech_stack.map((tech, tIdx) => {
+                      const parts = tech.split(/[:-]/);
+                      const techName = parts[0].trim();
+                      const techReason = parts.slice(1).join('-').trim() || tech;
+
+                      return (
+                        <div key={tIdx} className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--color-border)] flex flex-col gap-2 shadow-sm transition-all hover:border-[var(--color-border-hover)]">
+                          <span className="text-xl font-bold text-[var(--color-accent)]">{techName}</span>
+                          {parts.length > 1 && (
+                            <span className="text-base text-slate-400 font-medium leading-relaxed">{techReason}</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-lg theme-text-body">No tech stack provided.</p>
