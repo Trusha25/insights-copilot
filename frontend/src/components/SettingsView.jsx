@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
-export default function SettingsView({ theme, onThemeChange, primaryModel = 'gemini', onPrimaryModelChange }) {
+export default function SettingsView({ theme, onThemeChange, primaryModel = 'gemini', onPrimaryModelChange, experienceLevel = 'intermediate', onExperienceLevelChange }) {
   const [activeCategory, setActiveCategory] = useState('appearance');
   const [userEmail, setUserEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -208,6 +208,32 @@ export default function SettingsView({ theme, onThemeChange, primaryModel = 'gem
                     <span className="text-[11px] opacity-75">Direct, analytical insights</span>
                   </div>
                 </button>
+              </div>
+
+              <hr className="border-[var(--color-border)] my-6" />
+
+              <div>
+                <h3 className="text-xl font-bold theme-text-title mb-1">Founder Experience Level</h3>
+                <p className="theme-text-body text-sm">Calibrate the complexity of AI mentor explanations.</p>
+              </div>
+
+              <div className="flex bg-slate-200/50 dark:bg-slate-900/50 rounded-xl p-1 max-w-xl border border-[var(--color-border)]">
+                {['beginner', 'intermediate', 'advanced'].map((level) => {
+                  const isActive = experienceLevel === level;
+                  return (
+                    <button
+                      key={level}
+                      onClick={() => onExperienceLevelChange(level)}
+                      className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all capitalize cursor-pointer ${
+                        isActive 
+                          ? 'bg-white dark:bg-slate-800 text-[var(--color-accent)] shadow-sm' 
+                          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-300/30 dark:hover:bg-slate-700/30'
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

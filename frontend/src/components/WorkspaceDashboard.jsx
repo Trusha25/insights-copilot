@@ -4,6 +4,7 @@ import ArchitectureCard from './ArchitectureCard';
 import PlanCard from './PlanCard';
 import ResourcesCard from './ResourcesCard';
 import FollowUpChat from './FollowUpChat';
+import DetailPanel from './DetailPanel';
 
 export default function WorkspaceDashboard({
   result,
@@ -14,6 +15,7 @@ export default function WorkspaceDashboard({
   onToggleSaveActive,
   onEditIdea,
   primaryModel,
+  experienceLevel,
   onCancel,
   setToastMessage
 }) {
@@ -23,6 +25,15 @@ export default function WorkspaceDashboard({
     roadmap: false,
     resources: false
   });
+
+  const [activeTab, setActiveTab] = useState('analysis');
+  const [activePanel, setActivePanel] = useState(null);
+
+  const openPanel = (title, content) => {
+    console.log(`[openPanel] Title: ${title}`);
+    console.log('[openPanel] Content being passed:', content);
+    setActivePanel({ title, content });
+  };
 
   const toggleSection = (key) => {
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -35,11 +46,14 @@ export default function WorkspaceDashboard({
   const totalCriteria = Object.keys(criteria).length;
   const passedCriteria = Object.values(criteria).filter(x => x.pass).length;
   const baseScore = totalCriteria > 0 ? Math.round((passedCriteria / totalCriteria) * 100) : 75;
-  const startupScore = Math.min(96, Math.max(54, baseScore));
 
   const marketPotential = Math.min(95, Math.max(60, 100 - (result?.research?.existing_solutions?.length || 0) * 7));
   const technicalFeasibility = Math.min(95, Math.max(50, 60 + (result?.plan?.tech_stack?.length || 0) * 4));
-  const businessViability = criteria?.viability?.pass ? 85 : criteria?.profitability?.pass ? 80 : 65;
+  const businessViability = criteria?.scalable?.pass ? (criteria?.actionable?.pass ? 85 : 75) : 65;
+  
+  // COMPOSITE SCORE FORMULA — must stay in sync with agents.py:generate_founder_insight.
+  // If you change this calculation, update the matching formula there too.
+  const startupScore = Math.round((baseScore + marketPotential + technicalFeasibility + businessViability) / 4);
   
   const flaggedCount = result?.critique?.flagged_issues?.length || 0;
   const riskLevel = flaggedCount === 0 ? "Low" : flaggedCount <= 2 ? "Medium" : "High";
@@ -84,7 +98,9 @@ export default function WorkspaceDashboard({
   };
 
   return (
-    <div className="flex-1 flex flex-col gap-8 font-sans max-w-7xl mx-auto w-full select-none print:p-0">
+    <div className="flex flex-row w-full items-start">
+      {/* Main Content Dashboard */}
+      <div className={`flex-1 flex flex-col gap-8 font-sans max-w-7xl mx-auto w-full select-none print:p-0 transition-all duration-300 ${activePanel ? 'hidden lg:flex' : ''}`}>
       
       {/* Header bar actions */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-border)] pb-5 shrink-0 print:hidden">
@@ -158,6 +174,31 @@ export default function WorkspaceDashboard({
         </div>
       </header>
 
+      <div className="flex gap-4 border-b border-[var(--color-border)] pb-px -mt-4 mb-2 w-full">
+        <button
+          onClick={() => setActiveTab('analysis')}
+          className={`pb-3 px-4 text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === 'analysis'
+              ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)] font-bold'
+              : 'text-slate-400 hover:text-[var(--color-accent)]'
+          }`}
+        >
+          Analysis
+        </button>
+        <button
+          onClick={() => setActiveTab('executive')}
+          className={`pb-3 px-4 text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === 'executive'
+              ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)] font-bold'
+              : 'text-slate-400 hover:text-[var(--color-accent)]'
+          }`}
+        >
+          Executive Insights
+        </button>
+      </div>
+
+      {activeTab === 'executive' && (
+        <>
       {/* Row 1: Executive Summary & Brutal Verdict */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
         
@@ -259,11 +300,97 @@ export default function WorkspaceDashboard({
 
       </div>
 
-      {/* Row 2: Collapsible Accordion Sections + Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-        
-        {/* Accordions (Left Pane, 3 Cols) */}
-        <div className="lg:col-span-3 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch w-full mt-6">
+            {/* Radar Chart */}
+            <div className="theme-card flex flex-col items-center justify-center pb-4">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">At a Glance</span>
+              <div className="relative w-40 h-40 flex items-center justify-center">
+                <svg className="w-40 h-40" viewBox="0 0 100 100">
+                  {/* Background grid concentric circles */}
+                  <circle cx="50" cy="50" r="40" className="stroke-slate-800" strokeWidth="0.5" fill="none" />
+                  <circle cx="50" cy="50" r="30" className="stroke-slate-800/60" strokeWidth="0.5" fill="none" />
+                  <circle cx="50" cy="50" r="20" className="stroke-slate-800/40" strokeWidth="0.5" fill="none" />
+                  <circle cx="50" cy="50" r="10" className="stroke-slate-800/20" strokeWidth="0.5" fill="none" />
+                  
+                  {/* Axis straight lines */}
+                  <line x1="50" y1="10" x2="50" y2="90" className="stroke-slate-800/75" strokeWidth="0.5" />
+                  <line x1="10" y1="50" x2="90" y2="50" className="stroke-slate-800/75" strokeWidth="0.5" />
+                  
+                  {/* Labels */}
+                  <text x="50" y="8" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">MARKET</text>
+                  <text x="92" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="start">BUSINESS</text>
+                  <text x="50" y="96" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">RISK</text>
+                  <text x="8" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="end">TECH</text>
+
+                  {/* Scaling variables coordinates polygon */}
+                  <polygon
+                    points={`${ptMarket.x},${ptMarket.y} ${ptBusiness.x},${ptBusiness.y} ${ptRisk.x},${ptRisk.y} ${ptTech.x},${ptTech.y}`}
+                    className="fill-[var(--color-accent-bg)]/25 stroke-[var(--color-accent)]"
+                    strokeWidth="1.2"
+                  />
+                  
+                  {/* Data points */}
+                  <circle cx={ptMarket.x} cy={ptMarket.y} r="1.2" className="fill-[var(--color-accent)]" />
+                  <circle cx={ptBusiness.x} cy={ptBusiness.y} r="1.2" className="fill-[var(--color-accent)]" />
+                  <circle cx={ptRisk.x} cy={ptRisk.y} r="1.2" className="fill-[var(--color-accent)]" />
+                  <circle cx={ptTech.x} cy={ptTech.y} r="1.2" className="fill-[var(--color-accent)]" />
+                </svg>
+              </div>
+              
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3 text-[10px] font-bold text-slate-500 select-none">
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full"></span> Market: {marketPotential}</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full"></span> Tech: {technicalFeasibility}</span>
+              </div>
+            </div>
+
+            {/* Top Actions list */}
+            <div className="theme-card flex-1 flex flex-col justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Top Actions</h3>
+                
+                {result?.critique?.suggested_fixes && result.critique.suggested_fixes.length > 0 ? (
+                  <ul className="space-y-3.5">
+                    {result.critique.suggested_fixes.slice(0, 3).map((fix, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-xs">
+                        <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] border border-[var(--color-border-hover)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <p className="theme-text-body font-semibold leading-relaxed truncate" title={fix}>
+                          {fix}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ul className="space-y-3.5">
+                    <li className="flex items-start gap-2.5 text-xs">
+                      <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">1</span>
+                      <span className="theme-text-body font-semibold">Validate with target MVP hooks</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs">
+                      <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">2</span>
+                      <span className="theme-text-body font-semibold">Interview 20+ beta target audience</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs">
+                      <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">3</span>
+                      <span className="theme-text-body font-semibold">Build core modular landing page</span>
+                    </li>
+                  </ul>
+                )}
+              </div>
+
+              <button className="w-full py-2.5 mt-5 border border-[var(--color-border)] rounded-xl text-xs font-bold theme-text-title bg-[var(--bg-surface)] hover:border-[var(--color-border-hover)] transition-all cursor-pointer shadow-inner">
+                View All Recommendations
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'analysis' && (
+        <>
+      {/* Accordions (Left Pane, 3 Cols) */}
+      <div className="w-full space-y-4">
           
           {/* Technical Analysis Section */}
           <div className="theme-card !p-0 overflow-hidden border border-[var(--color-border)] rounded-2xl bg-[var(--bg-surface)]">
@@ -292,7 +419,7 @@ export default function WorkspaceDashboard({
             
             {expanded.techAnalysis && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45 space-y-6">
-                <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={workspaceId} onRefreshSuccess={onRefreshResearch} />
+                <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={workspaceId} onRefreshSuccess={onRefreshResearch} openPanel={openPanel} experienceLevel={experienceLevel} />
               </div>
             )}
           </div>
@@ -324,7 +451,7 @@ export default function WorkspaceDashboard({
 
             {expanded.architecture && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
-                <ArchitectureCard status={status} plan={result?.plan} />
+                <ArchitectureCard status={status} plan={result?.plan} openPanel={openPanel} />
               </div>
             )}
           </div>
@@ -356,7 +483,7 @@ export default function WorkspaceDashboard({
 
             {expanded.roadmap && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
-                <PlanCard status={status} roadmap={result?.plan?.roadmap} />
+                <PlanCard status={status} roadmap={result?.plan?.roadmap} openPanel={openPanel} />
               </div>
             )}
           </div>
@@ -388,113 +515,37 @@ export default function WorkspaceDashboard({
 
             {expanded.resources && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
-                <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} />
+                <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} openPanel={openPanel} />
               </div>
             )}
           </div>
 
         </div>
 
-        {/* Sidebar Panel (Right Pane, 1 Col) */}
-        <div className="theme-card flex flex-col gap-6 sticky top-24 print:static">
-          
-          {/* Radar Chart */}
-          <div className="flex flex-col items-center justify-center pb-4 border-b border-[var(--color-border)]">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">At a Glance</span>
-            <div className="relative w-40 h-40 flex items-center justify-center">
-              <svg className="w-40 h-40" viewBox="0 0 100 100">
-                {/* Background grid concentric circles */}
-                <circle cx="50" cy="50" r="40" className="stroke-slate-800" strokeWidth="0.5" fill="none" />
-                <circle cx="50" cy="50" r="30" className="stroke-slate-800/60" strokeWidth="0.5" fill="none" />
-                <circle cx="50" cy="50" r="20" className="stroke-slate-800/40" strokeWidth="0.5" fill="none" />
-                <circle cx="50" cy="50" r="10" className="stroke-slate-800/20" strokeWidth="0.5" fill="none" />
-                
-                {/* Axis straight lines */}
-                <line x1="50" y1="10" x2="50" y2="90" className="stroke-slate-800/75" strokeWidth="0.5" />
-                <line x1="10" y1="50" x2="90" y2="50" className="stroke-slate-800/75" strokeWidth="0.5" />
-                
-                {/* Labels */}
-                <text x="50" y="8" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">MARKET</text>
-                <text x="92" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="start">BUSINESS</text>
-                <text x="50" y="96" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">RISK</text>
-                <text x="8" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="end">TECH</text>
-
-                {/* Scaling variables coordinates polygon */}
-                <polygon
-                  points={`${ptMarket.x},${ptMarket.y} ${ptBusiness.x},${ptBusiness.y} ${ptRisk.x},${ptRisk.y} ${ptTech.x},${ptTech.y}`}
-                  className="fill-[var(--color-accent-bg)]/25 stroke-[var(--color-accent)]"
-                  strokeWidth="1.2"
-                />
-                
-                {/* Data points */}
-                <circle cx={ptMarket.x} cy={ptMarket.y} r="1.2" className="fill-[var(--color-accent)]" />
-                <circle cx={ptBusiness.x} cy={ptBusiness.y} r="1.2" className="fill-[var(--color-accent)]" />
-                <circle cx={ptRisk.x} cy={ptRisk.y} r="1.2" className="fill-[var(--color-accent)]" />
-                <circle cx={ptTech.x} cy={ptTech.y} r="1.2" className="fill-[var(--color-accent)]" />
-              </svg>
-            </div>
-            
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3 text-[10px] font-bold text-slate-500 select-none">
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full"></span> Market: {marketPotential}</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full"></span> Tech: {technicalFeasibility}</span>
-            </div>
-          </div>
-
-          {/* Top Actions list */}
-          <div className="flex-1 flex flex-col justify-between">
-            <div>
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Top Actions</h3>
-              
-              {result?.critique?.suggested_fixes && result.critique.suggested_fixes.length > 0 ? (
-                <ul className="space-y-3.5">
-                  {result.critique.suggested_fixes.slice(0, 3).map((fix, idx) => (
-                    <li key={idx} className="flex items-start gap-2.5 text-xs">
-                      <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] border border-[var(--color-border-hover)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">
-                        {idx + 1}
-                      </span>
-                      <p className="theme-text-body font-semibold leading-relaxed truncate" title={fix}>
-                        {fix}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <ul className="space-y-3.5">
-                  <li className="flex items-start gap-2.5 text-xs">
-                    <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">1</span>
-                    <span className="theme-text-body font-semibold">Validate with target MVP hooks</span>
-                  </li>
-                  <li className="flex items-start gap-2.5 text-xs">
-                    <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">2</span>
-                    <span className="theme-text-body font-semibold">Interview 20+ beta target audience</span>
-                  </li>
-                  <li className="flex items-start gap-2.5 text-xs">
-                    <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">3</span>
-                    <span className="theme-text-body font-semibold">Build core modular landing page</span>
-                  </li>
-                </ul>
-              )}
-            </div>
-
-            <button className="w-full py-2.5 mt-5 border border-[var(--color-border)] rounded-xl text-xs font-bold theme-text-title bg-[var(--bg-surface)] hover:border-[var(--color-border-hover)] transition-all cursor-pointer shadow-inner">
-              View All Recommendations
-            </button>
-          </div>
-
-        </div>
-
-      </div>
-
       {/* Row 3: Follow Up AI Consulting Chat */}
-      <div className="w-full shrink-0 print:hidden">
+      <div className="w-full shrink-0 print:hidden mt-6">
         <FollowUpChat
           workspaceId={workspaceId}
           initialHistory={result?.chat_history || []}
           idea={idea}
           primaryModel={primaryModel}
+          experienceLevel={experienceLevel}
         />
       </div>
+        </>
+      )}
 
+      </div>
+
+      {/* Slide-in Detail Panel */}
+      {activePanel && (
+        <DetailPanel 
+          title={activePanel.title} 
+          onClose={() => setActivePanel(null)}
+        >
+          {activePanel.content}
+        </DetailPanel>
+      )}
     </div>
   );
 }

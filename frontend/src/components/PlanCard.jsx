@@ -1,6 +1,7 @@
 import React from 'react';
+import ClickableSectionHeading from './ClickableSectionHeading';
 
-export default function PlanCard({ status, roadmap }) {
+export default function PlanCard({ status, roadmap, openPanel }) {
   const isLoading = status === "loading";
   
   if (isLoading) {
@@ -11,7 +12,13 @@ export default function PlanCard({ status, roadmap }) {
     );
   }
 
-  if (!roadmap || roadmap.length === 0) return null;
+  if (!roadmap || roadmap.length === 0) {
+    return (
+      <div className="p-6 text-center text-slate-500 font-medium bg-[var(--bg-surface)] rounded-xl border border-[var(--color-border)]">
+        No execution roadmap was generated for this workspace.
+      </div>
+    );
+  }
 
   return (
     <div className="theme-card h-fit">
@@ -41,41 +48,55 @@ export default function PlanCard({ status, roadmap }) {
               </div>
               <div className="flex-1 pb-6 border-b border-[var(--color-border)] last:border-0 last:pb-0 pt-1">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                  <h4 className="font-bold theme-text-title text-lg">{item.milestone}</h4>
+                  <div className="flex-1">
+                    <ClickableSectionHeading 
+                      title={item.milestone}
+                      subtitle={item.description || `${item.tasks ? item.tasks.length : 0} tasks planned`}
+                      onClick={() => openPanel(item.milestone, (
+                        <div>
+                          <div className="mb-4">
+                            <span className={`px-3 py-1 rounded-md text-xs font-semibold ${color.light} w-fit`}>
+                              {item.duration}
+                            </span>
+                          </div>
+                          {item.tasks && item.tasks.length > 0 ? (
+                            <ul className="list-disc pl-5 text-lg theme-text-body space-y-5">
+                              {item.tasks.map((task, idx) => {
+                                if (typeof task === 'string') {
+                                  return <li key={idx}>{task}</li>;
+                                }
+                                return (
+                                  <li key={idx} className="space-y-1 list-none -ml-4">
+                                    <div className="flex items-start gap-2">
+                                      <span className="text-[var(--color-accent)] font-bold mt-1 shrink-0">•</span>
+                                      <div>
+                                        <span className="font-bold theme-text-title text-xl">{task.title}</span>
+                                        {task.description && <span className="theme-text-body text-lg"> — {task.description}</span>}
+                                        {task.rationale && (
+                                          <div className="text-base text-[var(--color-accent)] bg-[var(--color-accent-bg)] px-3 py-1.5 rounded-xl border border-[var(--color-border-hover)] w-fit mt-2 font-medium">
+                                            <span className="font-semibold text-[var(--color-accent-text)]">Rationale: </span>
+                                            {task.rationale}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          ) : (
+                            <ul className="list-disc pl-5 text-lg theme-text-body space-y-4">
+                              <li>{item.description || "No tasks provided."}</li>
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    />
+                  </div>
                   <span className={`px-3 py-1 rounded-md text-xs font-semibold ${color.light} w-fit`}>
                     {item.duration}
                   </span>
                 </div>
-                {item.tasks && item.tasks.length > 0 ? (
-                  <ul className="list-disc pl-5 text-base theme-text-body space-y-3">
-                    {item.tasks.map((task, idx) => {
-                      if (typeof task === 'string') {
-                        return <li key={idx}>{task}</li>;
-                      }
-                      return (
-                        <li key={idx} className="space-y-1 list-none -ml-4">
-                          <div className="flex items-start gap-2">
-                            <span className="text-[var(--color-accent)] font-bold mt-1 shrink-0">•</span>
-                            <div>
-                              <span className="font-bold theme-text-title">{task.title}</span>
-                              {task.description && <span className="theme-text-body"> — {task.description}</span>}
-                              {task.rationale && (
-                                <div className="text-sm text-[var(--color-accent)] bg-[var(--color-accent-bg)] px-2.5 py-1 rounded-xl border border-[var(--color-border-hover)] w-fit mt-1.5 font-medium">
-                                  <span className="font-semibold text-[var(--color-accent-text)]">Rationale: </span>
-                                  {task.rationale}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <ul className="list-disc pl-5 text-base theme-text-body space-y-2">
-                    <li>{item.description || "No tasks provided."}</li>
-                  </ul>
-                )}
               </div>
             </div>
           );

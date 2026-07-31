@@ -6,79 +6,81 @@ from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import Dict, Any
 import httpx
-from agents import research_agent, planner_agent, critic_agent, mentor_agent
+from agents import research_agent, planner_agent, critic_agent, mentor_agent, generate_founder_insight
 from db import (
     init_db, save_history, get_all_history_summaries, get_history_by_id, 
     create_workspace, get_workspace, update_workspace_research, 
     toggle_save_workspace, get_user_settings, update_user_settings,
     save_mentor_chat, get_telegram_link_by_workspace_id, get_workspace_by_idea,
-    update_workspace_chat_history
+    update_workspace_chat_history, delete_workspace
 )
 import os
 import uuid
 import logging
-import threading
 import json
+import asyncio
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Telegram Bot — runs in a background thread alongside FastAPI
+# Telegram Bot — integrates with FastAPI's event loop
 # ---------------------------------------------------------------------------
-def _run_telegram_bot():
-    """Starts the Telegram bot polling in its own thread + event loop."""
-    import asyncio
+async def _init_telegram_bot():
+    """Initializes and starts the Telegram bot in the current event loop."""
     from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
     from bot.handlers.start import start_handler
     from bot.handlers.status import status_handler
     from bot.handlers.done import done_handler
     from bot.handlers.question import question_handler
     from bot.scheduler import start_scheduler
+    
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     if not token or token == "your_telegram_bot_token":
         logger.warning("TELEGRAM_BOT_TOKEN not set — Telegram bot will NOT start.")
-        return
+        return None
 
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
         app = ApplicationBuilder().token(token).build()
+
         app.add_handler(CommandHandler("start", start_handler))
         app.add_handler(CommandHandler("status", status_handler))
         app.add_handler(CommandHandler("done", done_handler))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, question_handler))
 
-        async def _start_bot():
-            await app.initialize()
-            start_scheduler(app)
-            await app.start()
-            await app.updater.start_polling()
-            logger.info("Telegram Bot is now polling!")
-
-        loop.run_until_complete(_start_bot())
-        logger.info("Telegram Bot started (polling mode, background thread)...")
-        loop.run_forever()
+        await app.initialize()
+        start_scheduler(app)
+        await app.start()
+        asyncio.create_task(app.updater.start_polling(drop_pending_updates=True))
+        logger.info("Telegram Bot started (polling mode, background task)...")
+        return app
     except Exception as e:
-        logger.error(f"Telegram bot crashed: {e}")
+        logger.error(f"Telegram bot failed to start: {e}")
+        return None
 
 # ---------------------------------------------------------------------------
-# FastAPI Lifespan — initializes DB + launches Telegram bot thread
+# FastAPI Lifespan — initializes DB + launches Telegram bot natively
 # ---------------------------------------------------------------------------
 @asynccontextmanager
-async def lifespan(app):
+async def lifespan(app: FastAPI):
     # --- Startup ---
     init_db()
     logger.info("Database initialized on startup")
 
-    bot_thread = threading.Thread(target=_run_telegram_bot, daemon=True)
-    bot_thread.start()
-    logger.info("Telegram bot thread launched")
+    bot_app = await _init_telegram_bot()
 
     yield  # App is running
 
     # --- Shutdown ---
     logger.info("Shutting down...")
+    if bot_app:
+        logger.info("Stopping Telegram bot...")
+        try:
+            await bot_app.updater.stop()
+            await bot_app.stop()
+            await bot_app.shutdown()
+            logger.info("Telegram bot stopped.")
+        except Exception as e:
+            logger.error(f"Error stopping Telegram bot: {e}")
 
 app = FastAPI(
     title="Insights Copilot API",
@@ -113,10 +115,12 @@ class MentorRequest(BaseModel):
     plan: dict
     question: str
     workspace_id: str = None
+    experience_level: str = "intermediate"
 
 class SettingsUpdate(BaseModel):
     theme: str
     primary_model: str = None
+    experience_level: str = None
 
 class ChatPayload(BaseModel):
     message: str
@@ -136,6 +140,12 @@ def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(secu
         logger.error(f"JWT Verification failed: {e}")
         raise HTTPException(status_code=401, detail="Invalid authorization token.")
 
+def validate_uuid(id_str: str, name: str = "workspace_id"):
+    try:
+        uuid.UUID(id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid {name} format. Must be a valid UUID.")
+
 @app.get("/api/health")
 def health_check():
     key = os.getenv("GROQ_API_KEY", "").strip()
@@ -152,18 +162,25 @@ async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_
     
     idea = payload.idea.strip()
     
-    # Check if a workspace already exists for this user + idea (case-insensitive, trimmed)
     existing_ws = get_workspace_by_idea(idea, user_id)
     if existing_ws:
-        logger.info(f"Workspace already exists for idea '{idea}'. Loading cached result.")
-        return {
-            "workspace_id": existing_ws["id"],
-            "research": existing_ws["research"],
-            "plan": existing_ws["plan"],
-            "critique": existing_ws.get("critique", {}),
-            "is_saved": existing_ws.get("is_saved", False),
-            "chat_history": existing_ws.get("chat_history", [])
-        }
+        is_failed = (
+            "Unable to generate" in str(existing_ws.get("research", {})) or
+            "Unable to generate" in str(existing_ws.get("plan", {}))
+        )
+        if is_failed:
+            logger.info(f"Workspace exists but contains failed generations for idea '{idea}'. Deleting and regenerating.")
+            delete_workspace(existing_ws["id"], user_id)
+        else:
+            logger.info(f"Workspace already exists for idea '{idea}'. Loading cached result.")
+            return {
+                "workspace_id": existing_ws["id"],
+                "research": existing_ws["research"],
+                "plan": existing_ws["plan"],
+                "critique": existing_ws.get("critique", {}),
+                "is_saved": existing_ws.get("is_saved", False),
+                "chat_history": existing_ws.get("chat_history", [])
+            }
     
     # 1. Research Agent
     research = await research_agent(idea)
@@ -203,6 +220,7 @@ async def analyze(payload: IdeaRequest, user_id: str = Depends(get_current_user_
 
 @app.get("/api/workspaces/{workspace_id}/telegram-link")
 def get_telegram_link_endpoint(workspace_id: str, user_id: str = Depends(get_current_user_id)):
+    validate_uuid(workspace_id)
     workspace = get_workspace(workspace_id, user_id=user_id)
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
@@ -255,6 +273,67 @@ def get_workspaces_endpoint(user_id: str = Depends(get_current_user_id)):
         logger.error(f"Failed to fetch workspaces list: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/notifications")
+def get_notifications(user_id: str = Depends(get_current_user_id)):
+    from db import get_supabase
+    supabase = get_supabase()
+    res = supabase.table("workspaces").select("id, idea, plan_json, created_at").eq("user_id", user_id).order("created_at", desc=True).execute()
+    
+    notifications = []
+    for row in (res.data or []):
+        ws_id = row["id"]
+        link = get_telegram_link_by_workspace_id(ws_id)
+        plan_json = row.get("plan_json") or {}
+        roadmap = plan_json.get("roadmap", [])
+        
+        if len(roadmap) > 0 and not link:
+            notifications.append({
+                "type": "needs_telegram",
+                "workspace_id": ws_id,
+                "idea": row["idea"],
+                "message": f"Connect Telegram to track milestones for {row['idea']}",
+                "timestamp": row["created_at"]
+            })
+            
+    return notifications[:4]
+
+@app.get("/api/activity")
+def get_activity(user_id: str = Depends(get_current_user_id)):
+    from db import get_supabase
+    supabase = get_supabase()
+    res = supabase.table("workspaces").select("id, idea, created_at, saved_at").eq("user_id", user_id).execute()
+    
+    activities = []
+    for row in (res.data or []):
+        ws_id = row["id"]
+        activities.append({
+            "type": "analyzed",
+            "message": f"Analyzed {row['idea']}",
+            "timestamp": row["created_at"],
+            "workspace_id": ws_id
+        })
+        
+        if row.get("saved_at"):
+            activities.append({
+                "type": "saved",
+                "message": f"Favorited {row['idea']}",
+                "timestamp": row["saved_at"],
+                "workspace_id": ws_id
+            })
+            
+        link = get_telegram_link_by_workspace_id(ws_id)
+        if link and link.get("linked_at"):
+            activities.append({
+                "type": "telegram_linked",
+                "message": f"Linked Telegram for {row['idea']}",
+                "timestamp": link["linked_at"],
+                "workspace_id": ws_id
+            })
+            
+    # sort by timestamp desc
+    activities.sort(key=lambda x: x["timestamp"], reverse=True)
+    return activities[:5]
+
 @app.get("/api/history")
 def get_history(saved: bool = False, user_id: str = Depends(get_current_user_id)):
     return get_all_history_summaries(user_id=user_id, saved_only=saved)
@@ -282,6 +361,7 @@ def get_history_item(history_id: str, user_id: str = Depends(get_current_user_id
 
 @app.patch("/api/workspaces/{workspace_id}/save")
 def toggle_save(workspace_id: str, user_id: str = Depends(get_current_user_id)):
+    validate_uuid(workspace_id)
     try:
         res = toggle_save_workspace(workspace_id=workspace_id, user_id=user_id)
         return {"workspace_id": workspace_id, "is_saved": res.get("is_saved", False)}
@@ -300,10 +380,13 @@ def update_settings(payload: SettingsUpdate, user_id: str = Depends(get_current_
         raise HTTPException(status_code=400, detail="Theme must be 'light' or 'dark'")
     if payload.primary_model and payload.primary_model not in ["gemini", "grok"]:
         raise HTTPException(status_code=400, detail="Primary model must be 'gemini' or 'grok'")
-    return update_user_settings(user_id, payload.theme, payload.primary_model)
+    if payload.experience_level and payload.experience_level not in ["beginner", "intermediate", "advanced"]:
+        raise HTTPException(status_code=400, detail="Experience level must be 'beginner', 'intermediate', or 'advanced'")
+    return update_user_settings(user_id, payload.theme, payload.primary_model, payload.experience_level)
 
 @app.post("/api/workspaces/{workspace_id}/refresh")
 async def refresh_workspace(workspace_id: str, user_id: str = Depends(get_current_user_id)):
+    validate_uuid(workspace_id)
     workspace = get_workspace(workspace_id, user_id=user_id)
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found or unauthorized")
@@ -346,7 +429,8 @@ async def mentor(payload: MentorRequest, user_id: str = Depends(get_current_user
         idea=payload.idea, 
         research=payload.research, 
         plan=payload.plan, 
-        question=payload.question
+        question=payload.question,
+        experience_level=payload.experience_level
     )
     
     # Save the exchange to mentor_chats if workspace_id is provided
@@ -363,12 +447,35 @@ async def mentor(payload: MentorRequest, user_id: str = Depends(get_current_user
             
     return res
 
+@app.get("/api/founder-profile")
+async def get_founder_profile(user_id: str = Depends(get_current_user_id)):
+    try:
+        from db import get_supabase
+        supabase = get_supabase()
+        res = supabase.table("workspaces").select("idea, research_json, plan_json").eq("user_id", user_id).execute()
+        workspace_summaries = []
+        for row in (res.data or []):
+            research = dict(row.get("research_json") or {})
+            critique = research.pop("_critique", {})
+            workspace_summaries.append({
+                "idea": row["idea"],
+                "critique": critique,
+                "plan": row.get("plan_json") or {},
+                "research": research
+            })
+        result = await generate_founder_insight(workspace_summaries)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to generate founder profile: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate founder profile")
+
 @app.post("/api/workspaces/{workspace_id}/chat")
 async def workspace_chat(
     workspace_id: str, 
     payload: ChatPayload, 
     user_id: str = Depends(get_current_user_id)
 ):
+    validate_uuid(workspace_id)
     if not payload.message or not payload.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
         
@@ -379,6 +486,13 @@ async def workspace_chat(
     # Get user settings to check primary model
     settings = get_user_settings(user_id)
     primary_model = settings.get("primary_model", "gemini")
+    experience_level = settings.get("experience_level", "intermediate")
+    
+    level_instruction = {
+        "beginner": "The user is a beginner. Use plain language, no unexplained jargon, 3-4 short sentences, and use an analogy if it helps.",
+        "intermediate": "The user has intermediate experience. Assume basic software and startup familiarity.",
+        "advanced": "The user is advanced. Be precise and dense, skip basic definitions."
+    }.get(experience_level, "The user has intermediate experience. Assume basic software and startup familiarity.")
     
     # Extract details
     idea = workspace.get("idea", "")
@@ -401,7 +515,7 @@ async def workspace_chat(
         f"- Critique Verdict: {json.dumps(critique.get('overall_verdict', ''))}\n\n"
         "Provide helpful, specific, and actionable advice to the user's questions. "
         "Do not summarize the whole project again unless asked. Be direct, conversational, and expert. "
-        "Keep your response to a maximum of 4 sentences unless detailed step-by-step instructions are explicitly requested."
+        f"Keep your response to a maximum of 4 sentences unless detailed step-by-step instructions are explicitly requested. {level_instruction}"
     )
     
     # Call model
@@ -525,7 +639,7 @@ async def workspace_chat(
             except Exception as inner_e:
                 raise HTTPException(status_code=500, detail=f"Failed to generate response: {e}. Fallback error: {inner_e}")
         else:
-            raise HTTPException(status_code=500, detail=f"Failed to generate response from model: {e}")
+            raise HTTPException(status_code=503, detail="Primary model and fallback models are unavailable or unconfigured.")
             
     # Update chat history
     new_chat_history = list(chat_history)

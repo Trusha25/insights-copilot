@@ -90,12 +90,14 @@ export async function fetchSettings() {
   return await response.json();
 }
 
-export async function saveSettings(theme, primaryModel = null) {
+export async function saveSettings(theme, primaryModel = null, experienceLevel = null) {
   const headers = await getHeaders();
+  const body = { theme, primary_model: primaryModel };
+  if (experienceLevel) body.experience_level = experienceLevel;
   const response = await fetch(`${BASE_URL}/api/settings`, {
     method: 'PUT',
     headers,
-    body: JSON.stringify({ theme, primary_model: primaryModel }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) throw new Error('Failed to save settings');
   return await response.json();
@@ -107,6 +109,42 @@ export async function fetchWorkspaces() {
     headers,
   });
   if (!response.ok) throw new Error('Failed to fetch workspaces');
+  return await response.json();
+}
+
+export async function fetchFounderProfile() {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/founder-profile`, {
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to fetch founder profile');
+  return await response.json();
+}
+
+export async function fetchMentorChatHistory(workspaceId) {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/workspaces/${workspaceId}/mentor-chats`, {
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to fetch mentor chats');
+  return await response.json();
+}
+
+export async function getNotifications() {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/notifications`, {
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to fetch notifications');
+  return await response.json();
+}
+
+export async function getActivity() {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/activity`, {
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to fetch activity');
   return await response.json();
 }
 
