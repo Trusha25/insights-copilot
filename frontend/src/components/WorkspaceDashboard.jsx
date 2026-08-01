@@ -865,8 +865,6 @@ export default function WorkspaceDashboard({
               <PlanCard
                 status={status}
                 roadmap={result?.plan?.roadmap}
-                plan={result?.plan}
-                openPanel={openPanel}
                 currentMilestoneIndex={result?.current_milestone_index || 0}
                 onMilestoneComplete={onMilestoneComplete}
                 milestoneCompleting={milestoneCompleting}
