@@ -45,7 +45,7 @@ export default function PlanCard({ status, roadmap, plan, openPanel, currentMile
 
           return (
             <div key={index} className="relative flex items-start gap-5">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shrink-0 shadow-sm outline outline-4 outline-[#0A0E0C] dark:outline-[#0A0E0C] outline-white ${isCompleted ? 'bg-[var(--accent-start)] text-[#0A0E0C]' : isCurrent ? color.bg + ' ring-2 ring-[var(--glow-accent)]/50 ring-offset-2 ring-offset-[#0A0E0C]' : color.bg}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shrink-0 shadow-sm outline outline-4 outline-white dark:outline-[#0B0F19] ${isCompleted ? 'bg-[var(--accent-start)] text-white dark:text-[#0A0E0C]' : isCurrent ? color.bg + ' ring-2 ring-[var(--glow-accent)]/50 ring-offset-2 ring-offset-white dark:ring-offset-[#0B0F19]' : color.bg}`}>
                 {isCompleted ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 ) : index + 1}
@@ -73,7 +73,7 @@ export default function PlanCard({ status, roadmap, plan, openPanel, currentMile
 
                       {/* Tasks Infographic Layout */}
                       <div className="space-y-6 flex-1">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-[var(--color-border)] pb-2 mb-6">
+                        <h3 className="text-lg font-bold theme-text-title flex items-center gap-2 border-b border-[var(--color-border)] pb-2 mb-6">
                           <svg className="w-5 h-5 text-[var(--color-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                           </svg>
@@ -97,23 +97,23 @@ export default function PlanCard({ status, roadmap, plan, openPanel, currentMile
                                       <span className="font-bold text-xs">{idx + 1}</span>
                                     </div>
                                     <div className="flex-1 min-w-0 space-y-3">
-                                      <h4 className="font-bold text-lg text-white leading-tight">{task.title}</h4>
+                                      <h4 className="font-bold text-lg theme-text-title leading-tight">{task.title}</h4>
                                       
                                       {task.description && (
-                                        <p className="text-base text-slate-400 font-medium leading-relaxed">
+                                        <p className="text-base theme-text-muted font-medium leading-relaxed">
                                           {task.description}
                                         </p>
                                       )}
                                       
                                       {task.rationale && (
-                                        <div className="mt-4 p-4 rounded-lg bg-[var(--bg-app)] border border-[var(--color-border)]">
+                                        <div className="mt-4 p-4 rounded-lg bg-[var(--bg-primary)] border border-[var(--color-border)]">
                                           <div className="flex items-center gap-1.5 mb-2">
                                             <svg className={`w-4 h-4 ${color.bg.split(' ')[0].replace('bg-', 'text-')}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Technical Rationale</span>
+                                            <span className="text-xs font-bold uppercase tracking-wider theme-text-title">Technical Rationale</span>
                                           </div>
-                                          <p className="text-sm text-slate-400 font-medium">
+                                          <p className="text-sm theme-text-body font-medium">
                                             {task.rationale}
                                           </p>
                                         </div>
@@ -137,7 +137,7 @@ export default function PlanCard({ status, roadmap, plan, openPanel, currentMile
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="flex flex-col min-w-0">
                       <h4 className="font-bold text-base theme-text-title truncate">{item.milestone}</h4>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
+                      <p className="text-xs theme-text-muted font-medium mt-0.5 truncate">
                         {item.description || `${item.tasks ? item.tasks.length : 0} tasks planned`}
                       </p>
                     </div>
@@ -157,7 +157,7 @@ export default function PlanCard({ status, roadmap, plan, openPanel, currentMile
                   <button
                     onClick={(e) => { e.stopPropagation(); onMilestoneComplete(); }}
                     disabled={milestoneCompleting}
-                    className="mt-2 w-full px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50"
+                    className="mt-2 w-full px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
                   >
                     {milestoneCompleting ? (
                       <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> Completing...</>

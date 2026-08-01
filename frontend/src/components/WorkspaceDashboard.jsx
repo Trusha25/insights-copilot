@@ -357,7 +357,7 @@ export default function WorkspaceDashboard({
           </button>
           
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight leading-tight truncate max-w-lg lg:max-w-xl" title={idea}>
+            <h1 className="text-2xl lg:text-3xl font-extrabold theme-text-title tracking-tight leading-tight truncate max-w-lg lg:max-w-xl" title={idea}>
               {idea}
             </h1>
             <button
@@ -666,10 +666,10 @@ export default function WorkspaceDashboard({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-white text-base">Technical Analysis</span>
-                    <span className="text-[9px] font-black uppercase bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">Completed</span>
+                    <span className="font-extrabold theme-text-title text-base">Technical Analysis</span>
+                    <span className="text-[9px] font-black uppercase bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded">Completed</span>
                   </div>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">Problem overview, market research, and critique breakdown</p>
+                  <p className="text-xs theme-text-muted font-semibold mt-0.5">Problem overview, market research, and critique breakdown</p>
                 </div>
               </div>
               <svg className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expanded.techAnalysis ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -678,7 +678,7 @@ export default function WorkspaceDashboard({
             </button>
             
             {expanded.techAnalysis && (
-              <div className="p-6 border-t border-[var(--color-border)] bg-[#0A0E0C]/45 space-y-6">
+              <div className="p-6 border-t border-[var(--color-border)] bg-[var(--bg-primary)] space-y-6">
                 <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={workspaceId} onRefreshSuccess={onRefreshResearch} openPanel={openPanel} experienceLevel={experienceLevel} />
               </div>
             )}
@@ -698,10 +698,10 @@ export default function WorkspaceDashboard({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-white text-base">Project Architecture</span>
-                    <span className="text-[9px] font-black uppercase bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">Completed</span>
+                    <span className="font-extrabold theme-text-title text-base">Project Architecture</span>
+                    <span className="text-[9px] font-black uppercase bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded">Completed</span>
                   </div>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">Technical feasibility, stack recommendations & component diagrams</p>
+                  <p className="text-xs theme-text-muted font-semibold mt-0.5">Technical feasibility, stack recommendations & component diagrams</p>
                 </div>
               </div>
               <svg className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expanded.architecture ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -710,7 +710,7 @@ export default function WorkspaceDashboard({
             </button>
 
             {expanded.architecture && (
-              <div className="p-6 border-t border-[var(--color-border)] bg-[#0A0E0C]/45">
+              <div className="p-6 border-t border-[var(--color-border)] bg-[var(--bg-primary)]">
                 <ArchitectureCard status={status} plan={result?.plan} openPanel={openPanel} />
               </div>
             )}
@@ -730,10 +730,10 @@ export default function WorkspaceDashboard({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-white text-base">5-Step Execution Roadmap</span>
-                    <span className="text-[9px] font-black uppercase bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">Completed</span>
+                    <span className="font-extrabold theme-text-title text-base">5-Step Execution Roadmap</span>
+                    <span className="text-[9px] font-black uppercase bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded">Completed</span>
                   </div>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">Milestone duration and execution steps roadmap</p>
+                  <p className="text-xs theme-text-muted font-semibold mt-0.5">Milestone duration and execution steps roadmap</p>
                 </div>
               </div>
               <svg className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expanded.roadmap ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -742,7 +742,7 @@ export default function WorkspaceDashboard({
             </button>
 
             {expanded.roadmap && (
-              <div className="p-6 border-t border-[var(--color-border)] bg-[#0A0E0C]/45">
+              <div className="p-6 border-t border-[var(--color-border)] bg-[var(--bg-primary)]">
                 <PlanCard status={status} roadmap={result?.plan?.roadmap} plan={result?.plan} openPanel={openPanel} currentMilestoneIndex={result?.current_milestone_index || 0} onMilestoneComplete={onMilestoneComplete} milestoneCompleting={milestoneCompleting} />
               </div>
             )}
@@ -762,10 +762,10 @@ export default function WorkspaceDashboard({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-white text-base">Key Resources</span>
-                    <span className="text-[9px] font-black uppercase bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">Completed</span>
+                    <span className="font-extrabold theme-text-title text-base">Key Resources</span>
+                    <span className="text-[9px] font-black uppercase bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded">Completed</span>
                   </div>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">Academic sources, GitHub code repositories & datasets</p>
+                  <p className="text-xs theme-text-muted font-semibold mt-0.5">Academic sources, GitHub code repositories & datasets</p>
                 </div>
               </div>
               <svg className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${expanded.resources ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -774,7 +774,7 @@ export default function WorkspaceDashboard({
             </button>
 
             {expanded.resources && (
-              <div className="p-6 border-t border-[var(--color-border)] bg-[#0A0E0C]/45">
+              <div className="p-6 border-t border-[var(--color-border)] bg-[var(--bg-primary)]">
                 <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} openPanel={openPanel} />
               </div>
             )}

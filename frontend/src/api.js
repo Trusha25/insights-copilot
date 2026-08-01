@@ -102,6 +102,16 @@ export async function deleteWorkspace(workspaceId) {
   return await response.json();
 }
 
+export async function deleteHistoryItem(id) {
+  const headers = await getHeaders();
+  const response = await fetch(`${BASE_URL}/api/history/${id}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!response.ok) throw new Error('Failed to delete history item');
+  return await response.json();
+}
+
 export async function fetchSettings() {
   const headers = await getHeaders();
   const response = await fetch(`${BASE_URL}/api/settings`, {

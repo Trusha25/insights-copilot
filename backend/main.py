@@ -12,7 +12,7 @@ from db import (
     create_workspace, get_workspace, update_workspace_research, 
     toggle_save_workspace, get_user_settings, update_user_settings,
     save_mentor_chat, get_telegram_link_by_workspace_id, get_workspace_by_idea,
-    update_workspace_chat_history, delete_workspace,
+    update_workspace_chat_history, delete_workspace, delete_history_item,
     mark_milestone_complete, get_all_workspaces_milestone_data
 )
 import os
@@ -439,6 +439,18 @@ def get_history_item(history_id: str, user_id: str = Depends(get_current_user_id
             "critique": workspace.get("critique", {}),
             "chat_history": workspace.get("chat_history", [])
         }
+
+@app.delete("/api/history/{history_id}")
+def delete_history_endpoint(history_id: str, user_id: str = Depends(get_current_user_id)):
+    try:
+        if history_id.isdigit():
+            delete_history_item(int(history_id), user_id)
+        else:
+            delete_workspace(history_id, user_id)
+        return {"status": "success", "history_id": history_id}
+    except Exception as e:
+        logger.error(f"Failed to delete history item: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.patch("/api/workspaces/{workspace_id}/save")
 def toggle_save(workspace_id: str, user_id: str = Depends(get_current_user_id)):

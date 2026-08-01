@@ -166,10 +166,10 @@ export default function LoadingDashboard({ idea, isDataReady, onCancel, onAnimat
         {/* Left pane: Title + Cards (Col span 3) */}
         <div className="lg:col-span-3 flex flex-col justify-between gap-6">
           <div className="text-center lg:text-left mb-2">
-            <h2 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-none mb-2">
+            <h2 className="text-3xl lg:text-4xl font-extrabold theme-text-title tracking-tight leading-none mb-2">
               Analyzing Your Startup Idea
             </h2>
-            <p className="text-slate-400 text-sm font-medium">
+            <p className="theme-text-muted text-sm font-medium">
               Our AI agents are working their magic...
             </p>
           </div>
@@ -192,12 +192,12 @@ export default function LoadingDashboard({ idea, isDataReady, onCancel, onAnimat
                 >
                   {/* Top line with Checkmark badge */}
                   <div className="flex justify-between items-start">
-                    <div className={`p-2.5 rounded-xl ${isRunning ? 'bg-[var(--color-accent)] text-[#0A0E0C]' : 'bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-border-hover)]'}`}>
+                    <div className={`p-2.5 rounded-xl ${isRunning ? 'bg-[var(--color-accent)] text-white dark:text-[#0A0E0C]' : 'bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-border-hover)]'}`}>
                       {agent.icon}
                     </div>
 
                     {isCompleted && (
-                      <div className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-[#0A0E0C] flex items-center justify-center text-xs font-black shadow-md shadow-[var(--color-accent-glow)] border border-[var(--color-border)]">
+                      <div className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-white dark:text-[#0A0E0C] flex items-center justify-center text-xs font-black shadow-md shadow-[var(--color-accent-glow)] border border-[var(--color-border)]">
                         ✓
                       </div>
                     )}
@@ -208,10 +208,10 @@ export default function LoadingDashboard({ idea, isDataReady, onCancel, onAnimat
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-[var(--color-accent)] block mb-1">
                       {agent.role}
                     </span>
-                    <h4 className="font-bold text-white text-base leading-tight mb-1.5">
+                    <h4 className="font-bold theme-text-title text-base leading-tight mb-1.5">
                       {agent.name}
                     </h4>
-                    <p className="text-xs text-slate-400 font-medium leading-relaxed mb-3">
+                    <p className="text-xs theme-text-muted font-medium leading-relaxed mb-3">
                       {agent.desc}
                     </p>
                   </div>
@@ -225,7 +225,7 @@ export default function LoadingDashboard({ idea, isDataReady, onCancel, onAnimat
                       </span>
                     </div>
 
-                    <div className="w-full bg-slate-900/60 rounded-full h-1.5 border border-transparent overflow-hidden">
+                    <div className="w-full bg-slate-200 dark:bg-slate-900/60 rounded-full h-1.5 border border-transparent overflow-hidden">
                       <div
                         className="bg-[var(--color-accent)] h-1.5 rounded-full transition-all duration-300"
                         style={{ width: `${agent.progress}%` }}
@@ -259,7 +259,7 @@ export default function LoadingDashboard({ idea, isDataReady, onCancel, onAnimat
           <div className="flex flex-col items-center justify-center py-2">
             <div className="relative w-32 h-32 flex items-center justify-center">
               <svg className="w-32 h-32 transform -rotate-90">
-                <circle cx="64" cy="64" r="50" className="stroke-slate-900" strokeWidth="8" fill="transparent" />
+                <circle cx="64" cy="64" r="50" className="stroke-slate-200 dark:stroke-slate-900" strokeWidth="8" fill="transparent" />
                 <circle
                   cx="64"
                   cy="64"
@@ -273,7 +273,7 @@ export default function LoadingDashboard({ idea, isDataReady, onCancel, onAnimat
                 />
               </svg>
               <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-2xl font-black text-white leading-none">
+                <span className="text-2xl font-black theme-text-title leading-none">
                   {Math.round(overallProgress)}%
                 </span>
                 <span className="text-[9px] font-bold text-slate-500 tracking-wider uppercase mt-1">

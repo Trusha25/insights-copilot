@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchHistory, fetchHistoryItem, toggleSaveWorkspace, deleteWorkspace } from '../api';
+import { fetchHistory, fetchHistoryItem, toggleSaveWorkspace, deleteWorkspace, deleteHistoryItem } from '../api';
 
 export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSaveCache }) {
   const [history, setHistory] = useState([]);
@@ -67,13 +67,16 @@ export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSa
   const handleDelete = async (item, e) => {
     e.stopPropagation();
     const wsId = item.workspace_id;
-    if (!wsId) return;
     
     if (!window.confirm("Are you sure you want to delete this workspace? This cannot be undone.")) return;
     
     try {
-      await deleteWorkspace(wsId);
-      setHistory(prev => prev.filter(x => x.workspace_id !== wsId));
+      if (wsId) {
+        await deleteWorkspace(wsId);
+      } else {
+        await deleteHistoryItem(item.id);
+      }
+      setHistory(prev => prev.filter(x => x.id !== item.id && (!wsId || x.workspace_id !== wsId)));
     } catch (err) {
       console.error('Failed to delete workspace', err);
       alert('Failed to delete workspace');
@@ -110,7 +113,7 @@ export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSa
           className={`pb-3 px-4 text-xs font-semibold transition-all relative cursor-pointer ${
             activeTab === 'history'
               ? 'text-[var(--accent-end)] border-b-2 border-[var(--accent-start)] font-bold'
-              : 'text-[var(--text-secondary)] hover:text-white'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
           All History
@@ -120,7 +123,7 @@ export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSa
           className={`pb-3 px-4 text-xs font-semibold transition-all relative cursor-pointer ${
             activeTab === 'saved'
               ? 'text-[var(--accent-end)] border-b-2 border-[var(--accent-start)] font-bold'
-              : 'text-[var(--text-secondary)] hover:text-white'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
           Saved Favorites

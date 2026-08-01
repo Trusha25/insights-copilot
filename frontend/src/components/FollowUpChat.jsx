@@ -124,11 +124,11 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
                 <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                   <div className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed shadow-sm ${
                     isUser 
-                      ? 'bg-[var(--color-accent)] text-[#0A0E0C] rounded-br-none font-semibold' 
-                      : 'bg-[var(--bg-surface)] border border-[var(--color-border)] text-slate-700 dark:text-slate-300 rounded-bl-none shadow-inner'
+                      ? 'bg-[var(--color-primary)] text-white rounded-br-none font-semibold' 
+                      : 'bg-[var(--bg-primary)] border border-[var(--border-subtle)] theme-text-body rounded-bl-none shadow-sm'
                   }`}>
                     {/* Role Header */}
-                    <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70 ${isUser ? 'text-[#0A0E0C]/75 font-extrabold' : 'text-[var(--color-accent)]'}`}>
+                    <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 opacity-80 ${isUser ? 'text-white/80 font-extrabold' : 'text-[var(--color-accent)]'}`}>
                       {isUser ? 'You' : 'AI Consultant'}
                     </div>
                     
@@ -142,7 +142,7 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
             {/* Loading Indicator */}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-2xl p-4 bg-[var(--bg-surface)] border border-[var(--color-border)] text-slate-500 rounded-bl-none shadow-sm">
+                <div className="max-w-[80%] rounded-2xl p-4 bg-[var(--bg-primary)] border border-[var(--border-subtle)] theme-text-muted rounded-bl-none shadow-sm">
                   <div className="text-[10px] font-bold uppercase tracking-wider mb-1 text-[var(--color-accent)] opacity-70">
                     AI Consultant
                   </div>
@@ -157,7 +157,7 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
 
             {/* Error Message */}
             {error && (
-              <div className="p-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl text-xs font-semibold">
+              <div className="p-3 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-xl text-xs font-semibold">
                 ⚠️ {error}
               </div>
             )}
@@ -189,7 +189,7 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
           onKeyDown={handleKeyDown}
           placeholder="Ask a follow-up question..."
           rows="1"
-          className="flex-1 px-3 py-2 bg-transparent theme-text-body placeholder-slate-500 focus:outline-none resize-none text-sm max-h-24 scrollbar-none"
+          className="flex-1 px-3 py-2 bg-transparent theme-text-body placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none resize-none text-sm max-h-24 scrollbar-none"
           disabled={isLoading}
         />
         <button
@@ -197,7 +197,7 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
           disabled={isLoading || !input.trim()}
           className="w-10 h-10 theme-btn-primary rounded-xl flex items-center justify-center transition-all shrink-0 active:scale-95 cursor-pointer hover:translate-y-0"
         >
-          <svg className="w-5 h-5 transform rotate-90 text-[#0A0E0C]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 transform rotate-90 text-white dark:text-[#0B0F19]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         </button>

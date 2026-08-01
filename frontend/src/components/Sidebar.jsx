@@ -99,7 +99,7 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
 
   return (
     <div
-      className={`bg-[var(--bg-surface)]/90 backdrop-blur-2xl border-r border-[#63D7E8]/20 h-screen flex flex-col sticky top-0 shrink-0 font-sans z-30 transition-all duration-300 ease-in-out shadow-[0_0_30px_rgba(0,0,0,0.6)] ${
+      className={`bg-[var(--bg-secondary)] backdrop-blur-2xl border-r border-[var(--border-subtle)] h-screen flex flex-col sticky top-0 shrink-0 font-sans z-30 transition-all duration-300 ease-in-out shadow-sm ${
         isCollapsed ? 'w-[78px]' : 'w-[260px]'
       }`}
     >
@@ -109,15 +109,15 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
         <div className={`flex items-center justify-between mb-8 select-none ${isCollapsed ? 'px-4' : 'px-5'}`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
-              <div className="absolute inset-0 bg-[#63D7E8]/20 rounded-xl blur-md animate-pulse"></div>
-              <svg className="w-8 h-8 text-[#63D7E8] relative drop-shadow-[0_0_8px_var(--color-accent-glow)]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <div className="absolute inset-0 bg-[var(--color-accent-glow)] rounded-xl blur-md animate-pulse"></div>
+              <svg className="w-8 h-8 text-[var(--color-accent)] relative drop-shadow-[0_0_8px_var(--color-accent-glow)]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l8.66 5v10L12 22l-8.66-5V7L12 2z" />
               </svg>
             </div>
             {!isCollapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="font-extrabold text-white text-[16px] tracking-tight leading-tight truncate">iNSIGHTS OS</span>
-                <span className="text-[8.5px] font-bold text-slate-400 tracking-wider uppercase mt-0.5 leading-none truncate">Innovation Platform</span>
+                <span className="font-extrabold theme-text-title text-[16px] tracking-tight leading-tight truncate">iNSIGHTS OS</span>
+                <span className="text-[8.5px] font-bold theme-text-muted tracking-wider uppercase mt-0.5 leading-none truncate">Innovation Platform</span>
               </div>
             )}
           </div>
@@ -142,7 +142,7 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
             <button
               onClick={handleToggleCollapse}
               aria-label="Expand Sidebar"
-              className="w-full flex items-center justify-center p-2.5 rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-secondary)] transition-all cursor-pointer"
+              className="w-full flex items-center justify-center p-2.5 rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-all cursor-pointer"
               title="Expand Sidebar"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -158,10 +158,10 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
             <button
               onClick={onNewAnalysis}
               aria-label="New Analysis"
-              className="flex items-center justify-center w-10 h-10 theme-btn-primary rounded-lg cursor-pointer mx-auto shrink-0 shadow-md shadow-[var(--color-accent-glow)]"
+              className="flex items-center justify-center w-10 h-10 theme-btn-primary rounded-lg cursor-pointer mx-auto shrink-0 shadow-md"
               title="New Analysis"
             >
-              <svg className="w-5 h-5 text-[#0B0F19]" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-white dark:text-[#0B0F19]" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
             </button>
@@ -170,10 +170,10 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
               onClick={onNewAnalysis}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 theme-btn-primary rounded-lg text-sm cursor-pointer shrink-0"
             >
-              <svg className="w-4 h-4 text-[#0B0F19]" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-white dark:text-[#0B0F19]" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              <span className="font-extrabold text-[#0B0F19]">New Analysis</span>
+              <span className="font-extrabold text-white dark:text-[#0B0F19]">New Analysis</span>
             </button>
           )}
         </div>
@@ -190,8 +190,8 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
                   aria-label={item.label}
                   className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 border mx-auto cursor-pointer ${
                     isActive
-                      ? 'bg-[var(--color-accent-bg)] border-[var(--accent-start)] text-[var(--accent-end)] shadow-[0_0_12px_var(--color-accent-glow)]'
-                      : 'bg-transparent border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-white'
+                      ? 'bg-[var(--color-accent-bg)] border-[var(--accent-start)] text-[var(--accent-end)] shadow-sm'
+                      : 'bg-transparent border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] hover:text-[var(--text-primary)]'
                   }`}
                   title={item.label}
                 >
@@ -205,18 +205,18 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
                 onClick={() => onNavigate(item.id)}
                 className={`w-full flex items-center justify-start gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 font-semibold text-sm cursor-pointer relative ${
                   isActive
-                    ? 'bg-[rgba(99,215,232,0.09)] text-[#63D7E8]'
-                    : 'text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.04)] hover:text-white'
+                    ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent)]'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--color-accent-bg)]/40 hover:text-[var(--text-primary)]'
                 }`}
               >
                 {/* Active left accent bar */}
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-[#8FEA8A] to-[#63D7E8] shadow-[0_0_8px_rgba(99,215,232,0.7)]" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-[var(--accent-start)] to-[var(--accent-mid)] shadow-sm" />
                 )}
-                <span className={`${isActive ? 'text-[#63D7E8]' : 'text-[var(--text-secondary)]'} transition-colors`}>{item.icon}</span>
+                <span className={`${isActive ? 'text-[var(--color-accent)]' : 'text-[var(--text-secondary)]'} transition-colors`}>{item.icon}</span>
                 <span className="truncate">{item.label}</span>
                 {isActive && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#8FEA8A] shadow-[0_0_6px_rgba(143,234,138,0.8)]" />
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--accent-start)]" />
                 )}
               </button>
             );
@@ -229,7 +229,7 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-3.5 py-1">
             <div
-              className="w-10 h-10 rounded-full bg-gradient-to-tr from-[var(--accent-start)] via-[var(--accent-mid)] to-[var(--accent-end)] text-[#0B0F19] flex items-center justify-center font-extrabold text-xs border border-[var(--border-subtle)] shadow-sm shrink-0"
+              className="w-10 h-10 rounded-full bg-gradient-to-tr from-[var(--accent-start)] via-[var(--accent-mid)] to-[var(--accent-end)] text-white dark:text-[#0B0F19] flex items-center justify-center font-extrabold text-xs border border-[var(--border-subtle)] shadow-sm shrink-0"
               title={displayName || email}
             >
               {getInitials()}
@@ -248,22 +248,22 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
         ) : (
           <div className="space-y-3">
             {/* Profile Row */}
-            <div className="flex items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[rgba(255,255,255,0.025)] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(99,215,232,0.18)] transition-all group">
+            <div className="flex items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all group">
               <div className="flex items-center gap-2.5 min-w-0">
                 {/* Avatar with gradient ring */}
                 <div className="relative shrink-0">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#8FEA8A] via-[#63D7E8] to-[#4C8CFF] opacity-60 blur-[2px]" />
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#8FEA8A] via-[#63D7E8] to-[#4C8CFF] text-[#0B0F19] flex items-center justify-center font-extrabold text-xs relative z-10 shadow-sm">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[var(--accent-start)] via-[var(--accent-mid)] to-[var(--accent-end)] opacity-60 blur-[2px]" />
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[var(--accent-start)] via-[var(--accent-mid)] to-[var(--accent-end)] text-white dark:text-[#0B0F19] flex items-center justify-center font-extrabold text-xs relative z-10 shadow-sm">
                     {getInitials()}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-200 truncate group-hover:text-white transition-colors" title={displayName || email}>
+                  <p className="text-xs font-bold theme-text-title truncate transition-colors" title={displayName || email}>
                     {displayName || email.split('@')[0]}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[9px] text-[var(--text-secondary)] font-semibold leading-none">Pro Plan</span>
-                    <span className="inline-block bg-gradient-to-r from-[#8FEA8A] to-[#63D7E8] text-[#0B0F19] text-[8px] font-black px-1.5 py-0.5 rounded-md leading-none">PRO</span>
+                    <span className="text-[9px] theme-text-muted font-semibold leading-none">Pro Plan</span>
+                    <span className="inline-block bg-gradient-to-r from-[var(--accent-start)] to-[var(--accent-mid)] text-white dark:text-[#0B0F19] text-[8px] font-black px-1.5 py-0.5 rounded-md leading-none">PRO</span>
                   </div>
                 </div>
               </div>
@@ -271,7 +271,7 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
                 onClick={handleLogout}
                 aria-label="Sign Out"
                 title="Sign Out"
-                className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-[rgba(255,255,255,0.08)] transition-all shrink-0 cursor-pointer"
+                className="p-1.5 rounded-lg theme-text-muted hover:theme-text-title hover:bg-[var(--color-accent-bg)] transition-all shrink-0 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -280,20 +280,20 @@ export default function Sidebar({ currentView, onNavigate, onNewAnalysis }) {
             </div>
 
             {/* Analyses Usage Progress Bar */}
-            <div className="p-2.5 rounded-xl bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] space-y-2">
+            <div className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[9.5px] font-700 text-slate-500 uppercase tracking-wider">Analyses Used</span>
-                <span className="text-[10px] text-white font-bold">12 / 50</span>
+                <span className="text-[9.5px] font-bold theme-text-muted uppercase tracking-wider">Analyses Used</span>
+                <span className="text-[10px] theme-text-title font-bold">12 / 50</span>
               </div>
-              <div className="w-full bg-[rgba(255,255,255,0.05)] rounded-full h-1.5 overflow-hidden relative">
+              <div className="w-full bg-[var(--border-subtle)] rounded-full h-1.5 overflow-hidden relative">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#8FEA8A] via-[#63D7E8] to-[#4C8CFF] relative"
+                  className="h-full rounded-full bg-gradient-to-r from-[var(--accent-start)] via-[var(--accent-mid)] to-[var(--accent-end)] relative"
                   style={{ width: '24%' }}
                 >
-                  <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[#63D7E8] shadow-[0_0_6px_rgba(99,215,232,0.8)] border border-[#0B0F19]" />
+                  <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[var(--accent-mid)] shadow-sm border border-[var(--bg-primary)]" />
                 </div>
               </div>
-              <p className="text-[9px] text-slate-600 font-medium truncate">Pro Plan • Renews May 24, 2025</p>
+              <p className="text-[9px] theme-text-muted font-medium truncate">Pro Plan • Renews May 24, 2025</p>
             </div>
           </div>
         )}

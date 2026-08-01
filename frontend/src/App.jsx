@@ -628,14 +628,14 @@ export default function App() {
                     </svg>
                     <span>AI-Powered Innovation OS</span>
                   </div>
-                                 {/* Headline */}
-                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-4 leading-[1.15] max-w-3xl text-center mx-auto select-none">
-                    Turn Ideas into <span className="text-[#8FEA8A]">Production-</span><span className="text-[#63D7E8]">Ready</span> Projects.
+                    {/* Headline */}
+                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4 leading-[1.15] max-w-3xl text-center mx-auto select-none">
+                    Turn Ideas into <span className="text-[var(--accent-start)]">Production-</span><span className="text-[var(--accent-mid)]">Ready</span> Projects.
                   </h1>
 
                   {/* Subtitle */}
-                  <p className="text-slate-300 text-sm md:text-base max-w-xl text-center mx-auto mb-8 leading-relaxed font-medium select-none">
-                    Our multi-agent AI system analyzes, validates, and builds execution blueprints <span className="text-[#63D7E8] font-semibold">to turn your raw concepts into real, buildable projects.</span>
+                  <p className="text-slate-600 dark:text-slate-300 text-sm md:text-base max-w-xl text-center mx-auto mb-8 leading-relaxed font-medium select-none">
+                    Our multi-agent AI system analyzes, validates, and builds execution blueprints <span className="text-[var(--accent-mid)] font-semibold">to turn your raw concepts into real, buildable projects.</span>
                   </p>
 
                   {status === "loading" ? (
@@ -647,11 +647,11 @@ export default function App() {
                           <div className="w-16 h-16 border-4 border-[var(--accent-mid)] border-t-transparent rounded-full animate-spin"></div>
                         </div>
                         <div>
-                          <h3 className="text-xl font-bold text-white mb-2">Analyzing Your Project Idea</h3>
+                          <h3 className="text-xl font-bold theme-text-title mb-2">Analyzing Your Project Idea</h3>
                           <p className="text-[var(--accent-mid)] text-xs font-semibold uppercase tracking-wider bg-[var(--color-accent-bg)] px-3 py-1 rounded-full border border-[var(--border-subtle)] inline-block mb-4">
                             Pipeline Active ({elapsedTime})
                           </p>
-                          <p className="text-slate-300 text-sm leading-relaxed min-h-[48px] px-4">
+                          <p className="theme-text-muted text-sm leading-relaxed min-h-[48px] px-4">
                             {getProgressText()}
                           </p>
                         </div>
@@ -679,7 +679,7 @@ export default function App() {
                       )}
 
                       {/* Integrated Premium Glass Prompt Card */}
-                      <div className="w-full max-w-3xl mx-auto theme-card p-4 sm:p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.4)] transition-all duration-300 focus-within:border-[var(--accent-mid)] focus-within:shadow-[0_0_30px_var(--color-accent-glow)] group">
+                      <div className="w-full max-w-3xl mx-auto theme-card p-4 sm:p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] backdrop-blur-xl shadow-md transition-all duration-300 focus-within:border-[var(--accent-mid)] focus-within:shadow-[0_0_30px_var(--color-accent-glow)] group">
 
                         {/* Prompt Helper Chips Strip */}
                         <div className="flex flex-wrap items-center gap-2 mb-3 pb-3 border-b border-[var(--border-subtle)] text-xs">
@@ -687,21 +687,21 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => setIdea("An AI-powered EdTech study companion that generates adaptive quizzes and summarizes lecture recordings into actionable study cards.")}
-                            className="px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white hover:border-[var(--border-strong)] transition-all cursor-pointer text-[11px] font-medium"
+                            className="px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-all cursor-pointer text-[11px] font-medium"
                           >
                             🎓 AI Study Companion
                           </button>
                           <button
                             type="button"
                             onClick={() => setIdea("A developer tool that automatically reviews pull requests for security flaws and suggests performance optimizations.")}
-                            className="px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white hover:border-[var(--border-strong)] transition-all cursor-pointer text-[11px] font-medium"
+                            className="px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-all cursor-pointer text-[11px] font-medium"
                           >
                             🚀 AI Code Reviewer
                           </button>
                           <button
                             type="button"
                             onClick={() => setIdea("A real-time customer support copilot for e-commerce brands that automates refund requests and order tracking.")}
-                            className="px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white hover:border-[var(--border-strong)] transition-all cursor-pointer text-[11px] font-medium"
+                            className="px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-all cursor-pointer text-[11px] font-medium"
                           >
                             ⚡ E-commerce Copilot
                           </button>
@@ -710,7 +710,7 @@ export default function App() {
                         {/* Main Textarea */}
                         <textarea
                           maxLength={2000}
-                          className="w-full h-32 bg-transparent text-white placeholder-slate-500 focus:outline-none text-base resize-none leading-relaxed p-0 border-0"
+                          className="w-full h-32 bg-transparent text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none text-base resize-none leading-relaxed p-0 border-0"
                           placeholder="Describe your project concept, target audience, and key features in detail..."
                           value={idea}
                           onChange={(e) => setIdea(e.target.value)}
@@ -738,10 +738,10 @@ export default function App() {
                             disabled={!idea.trim()}
                             className="theme-btn-solid text-xs py-2.5 px-5 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                           >
-                            <svg className="w-4 h-4 text-[#0B0F19]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-white dark:text-[#0B0F19]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
-                            <span>Run AI Analysis</span>
+                            <span className="text-white dark:text-[#0B0F19]">Run AI Analysis</span>
                             <span className="text-[10px] opacity-75 font-normal ml-1 hidden sm:inline">(Ctrl + ↵)</span>
                           </button>
                         </div>
@@ -751,58 +751,58 @@ export default function App() {
 
                   {/* Bottom 5 Stat Cards Strip */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 w-full max-w-4xl mt-8 relative z-20 select-none">
-                    <div className="p-3.5 rounded-2xl bg-[#0B0F19]/80 border border-[#8FEA8A]/20 backdrop-blur-xl flex items-center gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:border-[#8FEA8A]/40 transition-all">
-                      <div className="w-9 h-9 rounded-xl bg-[#8FEA8A]/10 border border-[#8FEA8A]/30 flex items-center justify-center text-[#8FEA8A] shrink-0">
+                    <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] backdrop-blur-xl flex items-center gap-3 shadow-sm hover:border-[var(--border-strong)] transition-all">
+                      <div className="w-9 h-9 rounded-xl bg-[var(--color-accent-bg)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--accent-start)] shrink-0">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                       </div>
                       <div className="text-left min-w-0">
-                        <div className="text-sm font-extrabold text-white leading-none">4</div>
-                        <div className="text-[10px] font-bold text-[#8FEA8A] uppercase tracking-wider mt-1 truncate">AI AGENTS</div>
-                        <div className="text-[9px] text-slate-400 truncate">Active</div>
+                        <div className="text-sm font-extrabold theme-text-title leading-none">4</div>
+                        <div className="text-[10px] font-bold text-[var(--accent-start)] uppercase tracking-wider mt-1 truncate">AI AGENTS</div>
+                        <div className="text-[9px] theme-text-muted truncate">Active</div>
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-[#0B0F19]/80 border border-[#63D7E8]/20 backdrop-blur-xl flex items-center gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:border-[#63D7E8]/40 transition-all">
-                      <div className="w-9 h-9 rounded-xl bg-[#63D7E8]/10 border border-[#63D7E8]/30 flex items-center justify-center text-[#63D7E8] shrink-0">
+                    <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] backdrop-blur-xl flex items-center gap-3 shadow-sm hover:border-[var(--border-strong)] transition-all">
+                      <div className="w-9 h-9 rounded-xl bg-[var(--color-accent-bg)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--accent-mid)] shrink-0">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s-8-1.79-8-4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
                       </div>
                       <div className="text-left min-w-0">
-                        <div className="text-sm font-extrabold text-white leading-none">10+</div>
-                        <div className="text-[10px] font-bold text-[#63D7E8] uppercase tracking-wider mt-1 truncate">DATA SOURCES</div>
-                        <div className="text-[9px] text-slate-400 truncate">Integrated</div>
+                        <div className="text-sm font-extrabold theme-text-title leading-none">10+</div>
+                        <div className="text-[10px] font-bold text-[var(--accent-mid)] uppercase tracking-wider mt-1 truncate">DATA SOURCES</div>
+                        <div className="text-[9px] theme-text-muted truncate">Integrated</div>
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-[#0B0F19]/80 border border-[#4C8CFF]/20 backdrop-blur-xl flex items-center gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:border-[#4C8CFF]/40 transition-all">
-                      <div className="w-9 h-9 rounded-xl bg-[#4C8CFF]/10 border border-[#4C8CFF]/30 flex items-center justify-center text-[#4C8CFF] shrink-0">
+                    <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] backdrop-blur-xl flex items-center gap-3 shadow-sm hover:border-[var(--border-strong)] transition-all">
+                      <div className="w-9 h-9 rounded-xl bg-[var(--color-accent-bg)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--accent-end)] shrink-0">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                       </div>
                       <div className="text-left min-w-0">
-                        <div className="text-sm font-extrabold text-white leading-none">98%</div>
-                        <div className="text-[10px] font-bold text-[#4C8CFF] uppercase tracking-wider mt-1 truncate">ACCURACY</div>
-                        <div className="text-[9px] text-slate-400 truncate">Prediction</div>
+                        <div className="text-sm font-extrabold theme-text-title leading-none">98%</div>
+                        <div className="text-[10px] font-bold text-[var(--accent-end)] uppercase tracking-wider mt-1 truncate">ACCURACY</div>
+                        <div className="text-[9px] theme-text-muted truncate">Prediction</div>
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-[#0B0F19]/80 border border-[#8FEA8A]/20 backdrop-blur-xl flex items-center gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:border-[#8FEA8A]/40 transition-all">
-                      <div className="w-9 h-9 rounded-xl bg-[#8FEA8A]/10 border border-[#8FEA8A]/30 flex items-center justify-center text-[#8FEA8A] shrink-0">
+                    <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] backdrop-blur-xl flex items-center gap-3 shadow-sm hover:border-[var(--border-strong)] transition-all">
+                      <div className="w-9 h-9 rounded-xl bg-[var(--color-accent-bg)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--accent-start)] shrink-0">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                       </div>
                       <div className="text-left min-w-0">
-                        <div className="text-sm font-extrabold text-white leading-none">500+</div>
-                        <div className="text-[10px] font-bold text-[#8FEA8A] uppercase tracking-wider mt-1 truncate">PROJECTS</div>
-                        <div className="text-[9px] text-slate-400 truncate">Built</div>
+                        <div className="text-sm font-extrabold theme-text-title leading-none">500+</div>
+                        <div className="text-[10px] font-bold text-[var(--accent-start)] uppercase tracking-wider mt-1 truncate">PROJECTS</div>
+                        <div className="text-[9px] theme-text-muted truncate">Built</div>
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-[#0B0F19]/80 border border-[#A78BFA]/20 backdrop-blur-xl flex items-center gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:border-[#A78BFA]/40 transition-all">
-                      <div className="w-9 h-9 rounded-xl bg-[#A78BFA]/10 border border-[#A78BFA]/30 flex items-center justify-center text-[#A78BFA] shrink-0">
+                    <div className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] backdrop-blur-xl flex items-center gap-3 shadow-sm hover:border-[var(--border-strong)] transition-all">
+                      <div className="w-9 h-9 rounded-xl bg-[var(--color-accent-bg)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--accent-mid)] shrink-0">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                       </div>
                       <div className="text-left min-w-0">
-                        <div className="text-sm font-extrabold text-white leading-none">12K+</div>
-                        <div className="text-[10px] font-bold text-[#A78BFA] uppercase tracking-wider mt-1 truncate">USERS</div>
-                        <div className="text-[9px] text-slate-400 truncate">Worldwide</div>
+                        <div className="text-sm font-extrabold theme-text-title leading-none">10k+</div>
+                        <div className="text-[10px] font-bold text-[var(--accent-mid)] uppercase tracking-wider mt-1 truncate">USERS</div>
+                        <div className="text-[9px] theme-text-muted truncate">Active</div>
                       </div>
                     </div>
                   </div>
