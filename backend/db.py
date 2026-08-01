@@ -22,7 +22,8 @@ def init_db():
     anon_key = os.environ.get("SUPABASE_KEY", "").strip()
     key = service_key or anon_key
     if not url or not key:
-        raise RuntimeError("SUPABASE_URL or SUPABASE_KEY environment variables are missing. Startup halted.")
+        logger.warning("SUPABASE_URL or SUPABASE_KEY environment variables are missing. Database operations will be unavailable until set.")
+        return
     key_type = "service_role" if service_key else "anon (WARNING: RLS will block writes)"
     logger.info(f"Supabase configured pointing to {url} using {key_type} key")
 
@@ -179,6 +180,16 @@ def get_workspace(workspace_id: str, user_id: str = None):
     except Exception as e:
         logger.error(f"Failed to get workspace {workspace_id} from Supabase: {e}")
         return None
+
+
+def get_workspaces_for_user(user_id: str) -> List[dict]:
+    try:
+        supabase = get_supabase()
+        response = supabase.table("workspaces").select("*").eq("user_id", user_id).execute()
+        return response.data if response.data else []
+    except Exception as e:
+        logger.error(f"Failed to get workspaces for user {user_id} from Supabase: {e}")
+        return []
 
 
 def get_workspace_by_idea(idea: str, user_id: str):
