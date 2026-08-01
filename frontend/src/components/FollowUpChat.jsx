@@ -55,7 +55,7 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter') {
       e.preventDefault();
       handleSend();
     }
@@ -69,11 +69,12 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
   ];
 
   const activeModelDisplay = primaryModel === 'grok' ? 'xAI Grok' : 'Gemini 1.5 Flash';
+  const hasConversation = messages.length > 0 || isLoading || Boolean(error);
 
   return (
-    <div className="w-full theme-card flex flex-col transition-all h-[550px] mt-8">
+    <section className={`fixed bottom-4 left-[88px] right-4 lg:left-[280px] lg:right-8 z-30 flex overflow-hidden border border-[var(--color-border)] bg-[var(--bg-surface)]/98 shadow-[0_12px_40px_rgba(0,0,0,0.24)] backdrop-blur-2xl transition-[height,border-radius] duration-300 ${hasConversation ? 'h-[min(680px,calc(100dvh-2rem))] min-h-[460px] flex-col rounded-[24px] p-5 sm:p-6' : 'h-auto rounded-[20px] p-0'}`}>
       {/* Chat Header */}
-      <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border)] mb-4 shrink-0">
+      {hasConversation && <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border)] mb-4 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-border-hover)] rounded-xl flex items-center justify-center shadow-sm">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -91,10 +92,10 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse"></span>
           {activeModelDisplay}
         </span>
-      </div>
+      </div>}
 
       {/* Message Feed */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+      {hasConversation && <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-2 pb-24 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800" aria-live="polite">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center px-4 py-8">
             <span className="text-4xl mb-3">💬</span>
@@ -165,7 +166,7 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
             <div ref={messagesEndRef} />
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Chat Input Bar */}
       {messages.length > 0 && (
@@ -182,26 +183,32 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
         </div>
       )}
       
-      <div className="flex items-center gap-3 border border-[var(--color-border)] rounded-2xl p-2 bg-[var(--bg-surface)] focus-within:ring-2 focus-within:ring-[var(--color-accent)]/20 focus-within:border-[var(--color-border-focus)] transition-all shrink-0">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask a follow-up question..."
-          rows="1"
-          className="flex-1 px-3 py-2 bg-transparent theme-text-body placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none resize-none text-sm max-h-24 scrollbar-none"
-          disabled={isLoading}
-        />
-        <button
-          onClick={() => handleSend()}
-          disabled={isLoading || !input.trim()}
-          className="w-10 h-10 theme-btn-primary rounded-xl flex items-center justify-center transition-all shrink-0 active:scale-95 cursor-pointer hover:translate-y-0"
-        >
-          <svg className="w-5 h-5 transform rotate-90 text-white dark:text-[#0B0F19]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-          </svg>
-        </button>
+      <div className={`${hasConversation ? 'absolute bottom-0 left-0 right-0 border-t border-[var(--color-border)] bg-[var(--bg-secondary)]/88 px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-10 shadow-[0_-12px_36px_rgba(0,0,0,0.16)]' : 'relative w-full p-2'} z-10 backdrop-blur-2xl`}>
+        <div className="max-w-5xl mx-auto flex h-14 items-center gap-2 border border-[var(--color-border)] rounded-[20px] px-2 bg-[var(--bg-surface)]/95 shadow-sm focus-within:ring-2 focus-within:ring-[var(--color-accent)]/20 focus-within:border-[var(--color-border-focus)] transition-all">
+          <button type="button" aria-label="Add attachment" title="Add attachment" className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 theme-text-muted hover:theme-text-title hover:bg-[var(--color-accent-bg)] transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M21.44 11.05l-8.49 8.49a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" /></svg>
+          </button>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask a follow-up question..."
+            aria-label="Ask a follow-up question"
+            className="flex-1 h-full min-w-0 px-2 bg-transparent theme-text-body placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none text-sm"
+            disabled={isLoading}
+          />
+          <button
+            onClick={() => handleSend()}
+            disabled={isLoading || !input.trim()}
+            className="w-10 h-10 theme-btn-primary rounded-xl flex items-center justify-center transition-all shrink-0 active:scale-95 cursor-pointer hover:translate-y-0"
+          >
+            <svg className="w-5 h-5 transform rotate-90 text-white dark:text-[#0B0F19]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

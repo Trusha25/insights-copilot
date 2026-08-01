@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import ResearchCard from './ResearchCard';
 import ArchitectureCard from './ArchitectureCard';
 import PlanCard from './PlanCard';
 import ResourcesCard from './ResourcesCard';
 import FollowUpChat from './FollowUpChat';
 import DetailPanel from './DetailPanel';
+import LockedFeatureCard from './LockedFeatureCard';
+import PremiumUpgradeModal from './PremiumUpgradeModal';
 import { updateWorkspaceTags } from '../api';
 
 export default function WorkspaceDashboard({
@@ -31,6 +34,13 @@ export default function WorkspaceDashboard({
 
   const [activeTab, setActiveTab] = useState('analysis');
   const [activePanel, setActivePanel] = useState(null);
+  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  const [isProUnlocked, setIsProUnlocked] = useState(false);
+  const [isUnlockingPro, setIsUnlockingPro] = useState(false);
+  const [requestedPremiumSection, setRequestedPremiumSection] = useState(null);
+  const [showPlanningPreview, setShowPlanningPreview] = useState(false);
+  const architectureRef = useRef(null);
+  const roadmapRef = useRef(null);
 
   const openPanel = (title, content) => {
     console.log(`[openPanel] Title: ${title}`);
@@ -40,6 +50,32 @@ export default function WorkspaceDashboard({
 
   const toggleSection = (key) => {
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const openPremiumUpgrade = (section) => {
+    setRequestedPremiumSection(section);
+    setIsPremiumModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isProUnlocked || !requestedPremiumSection) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const target = requestedPremiumSection === 'roadmap' ? roadmapRef.current : architectureRef.current;
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isProUnlocked, requestedPremiumSection]);
+
+  const handleUnlockPro = () => {
+    if (isUnlockingPro) return;
+    setIsUnlockingPro(true);
+
+    // Prototype-only success path. Replace this delay with Razorpay success handling later.
+    window.setTimeout(() => {
+      setIsProUnlocked(true);
+      setIsUnlockingPro(false);
+      setIsPremiumModalOpen(false);
+    }, 450);
   };
 
   const [tags, setTags] = useState(result?.tags || []);
@@ -684,6 +720,24 @@ export default function WorkspaceDashboard({
             )}
           </div>
 
+          {isProUnlocked ? (
+            <motion.section
+              ref={architectureRef}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+            >
+              <ArchitectureCard status={status} plan={result?.plan} openPanel={openPanel} />
+            </motion.section>
+          ) : (
+            <LockedFeatureCard
+              title="Project Architecture"
+              description="Technical feasibility, stack recommendations & component diagrams"
+              onClick={() => openPremiumUpgrade('architecture')}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2h2M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" /></svg>}
+            />
+          )}
+          <div className="hidden">
           {/* Project Architecture Section */}
           <div className="theme-card !p-0 overflow-hidden border border-[var(--color-border)] rounded-2xl bg-[var(--bg-surface)]">
             <button
@@ -743,10 +797,89 @@ export default function WorkspaceDashboard({
 
             {expanded.roadmap && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[var(--bg-primary)]">
-                <PlanCard status={status} roadmap={result?.plan?.roadmap} plan={result?.plan} openPanel={openPanel} currentMilestoneIndex={result?.current_milestone_index || 0} onMilestoneComplete={onMilestoneComplete} milestoneCompleting={milestoneCompleting} />
+                <div className="max-w-2xl mx-auto rounded-2xl border border-[var(--color-border-hover)] bg-[var(--bg-surface)] p-5 sm:p-6 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-border-hover)] flex items-center justify-center shrink-0">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m5-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-extrabold theme-text-title">Planning Model</h3>
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-border-hover)]">Pro feature</span>
+                        </div>
+                        <p className="text-sm theme-text-muted mt-1">Unlock the full interactive execution roadmap, milestones, and planning guidance.</p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-sm font-extrabold theme-text-title">₹499<span className="text-xs theme-text-muted font-semibold">/month</span></span>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => setToastMessage?.('Planning Model is available with the Pro plan for ₹499/month.')}
+                      className="px-4 py-2 rounded-xl text-sm font-bold bg-gradient-to-r from-[var(--accent-start)] to-[var(--accent-mid)] text-white dark:text-[#0B0F19] shadow-sm hover:opacity-90 transition-opacity"
+                    >
+                      Upgrade to Pro
+                    </button>
+                    <button
+                      onClick={() => setShowPlanningPreview((visible) => !visible)}
+                      className="px-3 py-2 rounded-xl text-xs font-bold theme-text-body border border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-accent-bg)]/30 transition-colors"
+                    >
+                      {showPlanningPreview ? 'Hide quick preview' : 'Quick preview'}
+                    </button>
+                  </div>
+
+                  {showPlanningPreview && (
+                    <div className="mt-5 pt-5 border-t border-[var(--color-border)]">
+                      <p className="text-xs font-bold uppercase tracking-wider theme-text-muted mb-3">Preview of your roadmap</p>
+                      <div className="space-y-2">
+                        {(result?.plan?.roadmap || []).slice(0, 2).map((item, index) => (
+                          <div key={`${item.milestone}-${index}`} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] p-3 bg-[var(--bg-primary)]">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold theme-text-title truncate">{index + 1}. {item.milestone}</p>
+                              <p className="text-xs theme-text-muted truncate mt-0.5">{item.description || 'Detailed milestones available with Pro.'}</p>
+                            </div>
+                            {item.duration && <span className="shrink-0 text-xs font-semibold theme-text-muted">{item.duration}</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-xs theme-text-muted">Upgrade to Pro to open every milestone and use the complete Planning Model.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
+
+          </div>
+
+          {isProUnlocked ? (
+            <motion.section
+              ref={roadmapRef}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              transition={{ duration: 0.35, ease: 'easeOut', delay: 0.06 }}
+            >
+              <PlanCard
+                status={status}
+                roadmap={result?.plan?.roadmap}
+                plan={result?.plan}
+                openPanel={openPanel}
+                currentMilestoneIndex={result?.current_milestone_index || 0}
+                onMilestoneComplete={onMilestoneComplete}
+                milestoneCompleting={milestoneCompleting}
+              />
+            </motion.section>
+          ) : (
+            <LockedFeatureCard
+              title="5-Step Execution Roadmap"
+              description="Milestone duration and step-by-step execution plan"
+              onClick={() => openPremiumUpgrade('roadmap')}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4" /></svg>}
+            />
+          )}
 
           {/* Key Resources Section */}
           <div className="theme-card !p-0 overflow-hidden border border-[var(--color-border)] rounded-2xl bg-[var(--bg-surface)]">
@@ -806,6 +939,12 @@ export default function WorkspaceDashboard({
           {activePanel.content}
         </DetailPanel>
       )}
+      <PremiumUpgradeModal
+        isOpen={isPremiumModalOpen}
+        onClose={() => setIsPremiumModalOpen(false)}
+        onUnlock={handleUnlockPro}
+        isUnlocking={isUnlockingPro}
+      />
     </div>
   );
 }

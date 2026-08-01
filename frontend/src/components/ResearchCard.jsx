@@ -87,9 +87,34 @@ function ExpandableListItem({ children, textToQuery, idea, research, plan, works
   );
 }
 
-export default function ResearchCard({ status, research, critique, idea, plan, workspaceId, onRefreshSuccess, openPanel, experienceLevel }) {
+function InlineSubtopic({ title, subtitle, preview, icon, isExpanded, onToggle, children }) {
+  return (
+    <div>
+      <ClickableSectionHeading
+        title={title}
+        subtitle={subtitle}
+        preview={preview}
+        icon={icon}
+        isExpanded={isExpanded}
+        onClick={onToggle}
+      />
+      {isExpanded && (
+        <div className="mb-3 p-5 border border-[var(--color-border)] rounded-xl bg-[var(--bg-primary)] animate-in fade-in slide-in-from-top-2 duration-200">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ResearchCard({ status, research, critique, idea, plan, workspaceId, onRefreshSuccess, experienceLevel }) {
   const isLoading = status === "loading";
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedSubtopic, setExpandedSubtopic] = useState(null);
+
+  const toggleSubtopic = (subtopic) => {
+    setExpandedSubtopic((current) => current === subtopic ? null : subtopic);
+  };
   
   const getRelativeTime = (isoString) => {
     if (!isoString) return "";
@@ -163,24 +188,27 @@ export default function ResearchCard({ status, research, critique, idea, plan, w
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <ClickableSectionHeading 
+        <InlineSubtopic
           title="Problem Overview" 
           subtitle="Summary of the core problem being solved"
           preview={research.problem_validation || "N/A"}
-          onClick={() => openPanel("Problem Overview", (
+          isExpanded={expandedSubtopic === 'problem-overview'}
+          onToggle={() => toggleSubtopic('problem-overview')}
+        >
             <p className="text-lg theme-text-body leading-relaxed">
               {research.problem_validation || "N/A"}
             </p>
-          ))} 
-        />
+        </InlineSubtopic>
       </div>
 
       <div>
-        <ClickableSectionHeading 
+        <InlineSubtopic
           title="Existing Solutions" 
           subtitle="Competitors and alternative approaches"
           preview={research.existing_solutions && research.existing_solutions.length > 0 ? `${research.existing_solutions.length} solutions found` : "No direct competitors found"}
-          onClick={() => openPanel("Existing Solutions", (
+          isExpanded={expandedSubtopic === 'existing-solutions'}
+          onToggle={() => toggleSubtopic('existing-solutions')}
+        >
             <>
             {research.existing_solutions && research.existing_solutions.length > 0 ? (
               <ul className="space-y-5">
@@ -201,29 +229,31 @@ export default function ResearchCard({ status, research, critique, idea, plan, w
               <p className="text-lg theme-text-body">No direct named competitors found.</p>
             )}
             </>
-          ))} 
-        />
+        </InlineSubtopic>
       </div>
 
       <div>
-        <ClickableSectionHeading 
+        <InlineSubtopic
           title="Market Opportunity" 
           subtitle="Target audience and market potential"
           preview={research.market_research_summary || "N/A"}
-          onClick={() => openPanel("Market Opportunity", (
+          isExpanded={expandedSubtopic === 'market-opportunity'}
+          onToggle={() => toggleSubtopic('market-opportunity')}
+        >
             <p className="text-lg theme-text-body leading-relaxed">
               {research.market_research_summary || "N/A"}
             </p>
-          ))} 
-        />
+        </InlineSubtopic>
       </div>
 
       <div>
-        <ClickableSectionHeading 
+        <InlineSubtopic
           title="Research Gaps" 
           subtitle="Identified missing areas in current solutions"
           preview={research.research_gaps && research.research_gaps.length > 0 ? `${research.research_gaps.length} gaps identified` : "No significant gaps identified"}
-          onClick={() => openPanel("Research Gaps", (
+          isExpanded={expandedSubtopic === 'research-gaps'}
+          onToggle={() => toggleSubtopic('research-gaps')}
+        >
             <>
             {research.research_gaps && research.research_gaps.length > 0 ? (
               <ul className="space-y-5">
@@ -241,16 +271,17 @@ export default function ResearchCard({ status, research, critique, idea, plan, w
               <p className="text-lg theme-text-body">No significant research gaps identified.</p>
             )}
             </>
-          ))} 
-        />
+        </InlineSubtopic>
       </div>
 
       <div>
-        <ClickableSectionHeading 
+        <InlineSubtopic
           title="Innovation Opportunities" 
           subtitle="Potential unique angles to explore"
           preview={research.innovation_opportunities && research.innovation_opportunities.length > 0 ? `${research.innovation_opportunities.length} opportunities identified` : "No innovation opportunities identified"}
-          onClick={() => openPanel("Innovation Opportunities", (
+          isExpanded={expandedSubtopic === 'innovation-opportunities'}
+          onToggle={() => toggleSubtopic('innovation-opportunities')}
+        >
             <>
             {research.innovation_opportunities && research.innovation_opportunities.length > 0 ? (
               <ul className="list-disc pl-6 text-lg theme-text-body space-y-4 marker:text-[var(--color-accent)]">
@@ -265,18 +296,19 @@ export default function ResearchCard({ status, research, critique, idea, plan, w
               <p className="text-lg theme-text-body">No innovation opportunities identified.</p>
             )}
             </>
-          ))} 
-        />
+        </InlineSubtopic>
       </div>
 
         {research.unverified_claims && research.unverified_claims.length > 0 && (
           <div className="bg-[var(--color-accent-bg)] border border-[var(--color-border-hover)] p-4 rounded-xl">
-            <ClickableSectionHeading 
+            <InlineSubtopic
               title="Unverified Claims" 
               subtitle="Statements requiring further evidence"
               preview={`${research.unverified_claims.length} claims requiring evidence`}
               icon={<svg className="w-5 h-5 text-[var(--color-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>}
-              onClick={() => openPanel("Unverified Claims", (
+              isExpanded={expandedSubtopic === 'unverified-claims'}
+              onToggle={() => toggleSubtopic('unverified-claims')}
+            >
                 <ul className="space-y-5">
                   {research.unverified_claims.map((claim, idx) => (
                     <ExpandableListItem 
@@ -288,16 +320,17 @@ export default function ResearchCard({ status, research, critique, idea, plan, w
                     </ExpandableListItem>
                   ))}
                 </ul>
-              ))} 
-            />
+            </InlineSubtopic>
           </div>
         )}
 
         <div className="md:col-span-2">
-          <ClickableSectionHeading 
+          <InlineSubtopic
             title="Critique Breakdown" 
             subtitle="Detailed pass/fail analysis criteria"
-            onClick={() => openPanel("Critique Breakdown", (
+            isExpanded={expandedSubtopic === 'critique-breakdown'}
+            onToggle={() => toggleSubtopic('critique-breakdown')}
+          >
               <div className="space-y-4">
                 {critique?.criteria && (
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -339,8 +372,7 @@ export default function ResearchCard({ status, research, critique, idea, plan, w
                   </div>
                 )}
               </div>
-            ))} 
-          />
+          </InlineSubtopic>
         </div>
       </div>
     </div>
