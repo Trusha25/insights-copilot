@@ -8,17 +8,22 @@ logger = logging.getLogger(__name__)
 
 def get_supabase() -> Client:
     url = os.environ.get("SUPABASE_URL", "").strip()
-    key = os.environ.get("SUPABASE_KEY", "").strip()
+    # Prefer service role key (bypasses RLS) for server-side operations;
+    # fall back to SUPABASE_KEY for backwards compat during transition.
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip() or os.environ.get("SUPABASE_KEY", "").strip()
     if not url or not key:
-        raise RuntimeError("SUPABASE_URL or SUPABASE_KEY environment variables are missing.")
+        raise RuntimeError("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables are missing.")
     return create_client(url, key)
 
 def init_db():
     url = os.environ.get("SUPABASE_URL", "").strip()
-    key = os.environ.get("SUPABASE_KEY", "").strip()
+    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    anon_key = os.environ.get("SUPABASE_KEY", "").strip()
+    key = service_key or anon_key
     if not url or not key:
-        raise RuntimeError("SUPABASE_URL or SUPABASE_KEY environment variables are missing. Startup halted.")
-    logger.info(f"Supabase configured pointing to {url}")
+        raise RuntimeError("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables are missing. Startup halted.")
+    key_type = "service_role" if service_key else "anon (WARNING: RLS will block writes)"
+    logger.info(f"Supabase configured pointing to {url} using {key_type} key")
 
 def save_history(idea: str, result: dict, user_id: str = None):
     try:
@@ -114,13 +119,22 @@ def create_workspace(workspace_id: str, idea: str, research: dict, plan: dict, u
             "idea": idea,
             "research_json": research_data,
             "plan_json": plan,
-            "is_saved": False
+            "is_saved": False,
+            "user_id": user_id
         }
-        if user_id:
-            payload["user_id"] = user_id
         supabase.table("workspaces").insert(payload).execute()
     except Exception as e:
         logger.error(f"Failed to create workspace in Supabase: {e}")
+
+def delete_workspace(workspace_id: str, user_id: str = None):
+    try:
+        supabase = get_supabase()
+        query = supabase.table("workspaces").delete().eq("id", workspace_id)
+        if user_id:
+            query = query.eq("user_id", user_id)
+        query.execute()
+    except Exception as e:
+        logger.error(f"Failed to delete workspace from Supabase: {e}")
 
 def get_workspace(workspace_id: str, user_id: str = None):
     try:
@@ -147,7 +161,8 @@ def get_workspace(workspace_id: str, user_id: str = None):
                 "plan": row["plan_json"],
                 "is_saved": row.get("is_saved", False),
                 "critique": critique,
-                "chat_history": chat_history
+                "chat_history": chat_history,
+                "tags": row.get("tags") or []
             }
         return None
     except Exception as e:
@@ -157,31 +172,30 @@ def get_workspace(workspace_id: str, user_id: str = None):
 def get_workspace_by_idea(idea: str, user_id: str):
     try:
         supabase = get_supabase()
-        query = supabase.table("workspaces").select("*")
+        query = supabase.table("workspaces").select("*").ilike("idea", idea.strip())
         if user_id:
             query = query.eq("user_id", user_id)
         res = query.execute()
         if res.data:
-            target = idea.strip().lower()
-            for row in res.data:
-                if row["idea"].strip().lower() == target:
-                    research = dict(row["research_json"] or {})
-                    critique = research.pop("_critique", {})
-                    # extract chat_history
-                    chat_history = row.get("chat_history")
-                    if chat_history is None:
-                        chat_history = research.pop("chat_history", [])
-                    else:
-                        research.pop("chat_history", None)
-                    return {
-                        "id": row["id"],
-                        "idea": row["idea"],
-                        "research": research,
-                        "plan": row["plan_json"],
-                        "is_saved": row.get("is_saved", False),
-                        "critique": critique,
-                        "chat_history": chat_history
-                    }
+            row = res.data[0]
+            research = dict(row["research_json"] or {})
+            critique = research.pop("_critique", {})
+            # extract chat_history
+            chat_history = row.get("chat_history")
+            if chat_history is None:
+                chat_history = research.pop("chat_history", [])
+            else:
+                research.pop("chat_history", None)
+            return {
+                "id": row["id"],
+                "idea": row["idea"],
+                "research": research,
+                "plan": row["plan_json"],
+                "is_saved": row.get("is_saved", False),
+                "critique": critique,
+                "chat_history": chat_history,
+                "tags": row.get("tags") or []
+            }
         return None
     except Exception as e:
         logger.error(f"Failed to find workspace by idea '{idea}': {e}")
@@ -226,9 +240,16 @@ def toggle_save_workspace(workspace_id: str, user_id: str = None):
         current_saved = response.data[0].get("is_saved", False)
         new_saved = not current_saved
         
-        supabase.table("workspaces").update({
-            "is_saved": new_saved
-        }).eq("id", workspace_id).execute()
+        from datetime import datetime, timezone
+        
+        update_data = {"is_saved": new_saved}
+        if new_saved:
+            update_data["saved_at"] = datetime.now(timezone.utc).isoformat()
+            
+        update_query = supabase.table("workspaces").update(update_data).eq("id", workspace_id)
+        if user_id:
+            update_query = update_query.eq("user_id", user_id)
+        update_query.execute()
         
         return {"workspace_id": workspace_id, "is_saved": new_saved}
     except Exception as e:
@@ -290,30 +311,33 @@ def update_last_reminder(chat_id: str):
 def get_user_settings(user_id: str) -> dict:
     try:
         supabase = get_supabase()
-        response = supabase.table("user_settings").select("theme, primary_model").eq("user_id", user_id).execute()
+        response = supabase.table("user_settings").select("theme, primary_model, experience_level").eq("user_id", user_id).execute()
         if response.data:
             row = response.data[0]
             return {
                 "theme": row.get("theme", "dark"),
-                "primary_model": row.get("primary_model", "gemini")
+                "primary_model": row.get("primary_model", "gemini"),
+                "experience_level": row.get("experience_level", "intermediate")
             }
         
-        default_settings = {"user_id": user_id, "theme": "dark", "primary_model": "gemini"}
+        default_settings = {"user_id": user_id, "theme": "dark", "primary_model": "gemini", "experience_level": "intermediate"}
         try:
             supabase.table("user_settings").insert(default_settings).execute()
         except Exception as insert_err:
             logger.warning(f"Could not insert user settings (table might be missing): {insert_err}")
-        return {"theme": "dark", "primary_model": "gemini"}
+        return {"theme": "dark", "primary_model": "gemini", "experience_level": "intermediate"}
     except Exception as e:
         logger.error(f"Failed to get user settings: {e}")
-        return {"theme": "dark", "primary_model": "gemini"}
+        return {"theme": "dark", "primary_model": "gemini", "experience_level": "intermediate"}
 
-def update_user_settings(user_id: str, theme: str, primary_model: str = None) -> dict:
+def update_user_settings(user_id: str, theme: str, primary_model: str = None, experience_level: str = None) -> dict:
     try:
         if theme not in ["light", "dark"]:
             raise ValueError("Theme must be 'light' or 'dark'")
         if primary_model and primary_model not in ["gemini", "grok"]:
             raise ValueError("Primary model must be 'gemini' or 'grok'")
+        if experience_level and experience_level not in ["beginner", "intermediate", "advanced"]:
+            raise ValueError("Experience level must be 'beginner', 'intermediate', or 'advanced'")
             
         payload = {
             "user_id": user_id,
@@ -322,6 +346,8 @@ def update_user_settings(user_id: str, theme: str, primary_model: str = None) ->
         }
         if primary_model:
             payload["primary_model"] = primary_model
+        if experience_level:
+            payload["experience_level"] = experience_level
             
         supabase = get_supabase()
         try:
@@ -332,12 +358,16 @@ def update_user_settings(user_id: str, theme: str, primary_model: str = None) ->
         ret = {"theme": theme}
         if primary_model:
             ret["primary_model"] = primary_model
+        if experience_level:
+            ret["experience_level"] = experience_level
         return ret
     except Exception as e:
         logger.error(f"Failed to update user settings: {e}")
         ret = {"theme": theme}
         if primary_model:
             ret["primary_model"] = primary_model
+        if experience_level:
+            ret["experience_level"] = experience_level
         return ret
 
 def get_telegram_link_by_workspace_id(workspace_id: str):
@@ -396,3 +426,74 @@ def update_workspace_chat_history(workspace_id: str, chat_history: list, user_id
     except Exception as e:
         logger.error(f"Failed to update chat history for workspace {workspace_id}: {e}")
         raise e
+
+def mark_milestone_complete(workspace_id: str, user_id: str = None) -> dict:
+    try:
+        supabase = get_supabase()
+        
+        query = supabase.table("workspaces").select("current_milestone_index, milestone_completions, plan_json").eq("id", workspace_id)
+        if user_id:
+            query = query.eq("user_id", user_id)
+        res = query.execute()
+        
+        if not res.data:
+            raise ValueError(f"Workspace {workspace_id} not found.")
+            
+        row = res.data[0]
+        current_index = row.get("current_milestone_index") or 0
+        milestone_completions = row.get("milestone_completions") or []
+        plan_json = row.get("plan_json") or {}
+        roadmap = plan_json.get("roadmap", [])
+        total_milestones = len(roadmap)
+        
+        if current_index >= total_milestones:
+            raise ValueError('All milestones already completed')
+            
+        from datetime import datetime, timezone
+        updated_list = list(milestone_completions)
+        updated_list.append({"index": current_index, "completed_at": datetime.now(timezone.utc).isoformat()})
+        
+        new_index = current_index + 1
+        
+        # update workspaces
+        update_ws_query = supabase.table("workspaces").update({
+            "current_milestone_index": new_index,
+            "milestone_completions": updated_list
+        }).eq("id", workspace_id)
+        if user_id:
+            update_ws_query = update_ws_query.eq("user_id", user_id)
+        update_ws_query.execute()
+        
+        # update telegram_links
+        try:
+            supabase.table("telegram_links").update({
+                "current_milestone_index": new_index
+            }).eq("workspace_id", workspace_id).execute()
+        except Exception as tel_err:
+            logger.warning(f"Failed to sync milestone to telegram link: {tel_err}")
+            
+        return {
+            "workspace_id": workspace_id,
+            "current_milestone_index": new_index,
+            "milestone_completions": updated_list,
+            "total_milestones": total_milestones
+        }
+    except Exception as e:
+        logger.error(f"Failed to mark milestone complete for workspace {workspace_id}: {e}")
+        raise e
+
+def get_all_workspaces_milestone_data(user_id: str) -> list[dict]:
+    try:
+        supabase = get_supabase()
+        res = supabase.table("workspaces").select("id, milestone_completions").eq("user_id", user_id).execute()
+        
+        result = []
+        for row in (res.data or []):
+            result.append({
+                "workspace_id": row["id"],
+                "milestone_completions": row.get("milestone_completions") or []
+            })
+        return result
+    except Exception as e:
+        logger.error(f"Failed to get milestone data for user {user_id}: {e}")
+        return []

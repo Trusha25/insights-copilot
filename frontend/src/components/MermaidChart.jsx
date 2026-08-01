@@ -15,7 +15,7 @@ mermaid.initialize({
   },
 });
 
-export default function MermaidChart({ chart }) {
+export default function MermaidChart({ chart, size = 'normal' }) {
   const containerRef = useRef(null);
   const [svgContent, setSvgContent] = useState('');
   const [error, setError] = useState(false);
@@ -66,7 +66,9 @@ export default function MermaidChart({ chart }) {
 
   return (
     <div 
-      className="mermaid-container w-full overflow-x-auto flex justify-center py-4 bg-slate-50 rounded-xl border border-slate-100"
+      className={`mermaid-container w-full overflow-x-auto flex justify-center py-4 bg-slate-50 rounded-xl border border-slate-100 ${
+        size === 'large' ? '[&>svg]:w-full [&>svg]:max-w-none [&>svg]:min-w-[800px] [&>svg]:h-auto p-4' : ''
+      }`}
       ref={containerRef}
       dangerouslySetInnerHTML={{ __html: svgContent }}
     />

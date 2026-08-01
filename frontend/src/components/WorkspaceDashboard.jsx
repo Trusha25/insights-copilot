@@ -4,6 +4,8 @@ import ArchitectureCard from './ArchitectureCard';
 import PlanCard from './PlanCard';
 import ResourcesCard from './ResourcesCard';
 import FollowUpChat from './FollowUpChat';
+import DetailPanel from './DetailPanel';
+import { updateWorkspaceTags } from '../api';
 
 export default function WorkspaceDashboard({
   result,
@@ -14,8 +16,11 @@ export default function WorkspaceDashboard({
   onToggleSaveActive,
   onEditIdea,
   primaryModel,
+  experienceLevel,
   onCancel,
-  setToastMessage
+  setToastMessage,
+  onMilestoneComplete,
+  milestoneCompleting
 }) {
   const [expanded, setExpanded] = useState({
     techAnalysis: true,
@@ -24,8 +29,63 @@ export default function WorkspaceDashboard({
     resources: false
   });
 
+  const [activeTab, setActiveTab] = useState('analysis');
+  const [activePanel, setActivePanel] = useState(null);
+
+  const openPanel = (title, content) => {
+    console.log(`[openPanel] Title: ${title}`);
+    console.log('[openPanel] Content being passed:', content);
+    setActivePanel({ title, content });
+  };
+
   const toggleSection = (key) => {
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const [tags, setTags] = useState(result?.tags || []);
+  const [tagInput, setTagInput] = useState('');
+  const [isUpdatingTags, setIsUpdatingTags] = useState(false);
+
+  const handleTagAdd = async (e) => {
+    if (e.key === 'Enter' && tagInput.trim()) {
+      const newTag = tagInput.trim();
+      if (!tags.includes(newTag)) {
+        const newTags = [...tags, newTag];
+        setTags(newTags);
+        setTagInput('');
+        try {
+          setIsUpdatingTags(true);
+          await updateWorkspaceTags(result.workspace_id, newTags);
+        } catch (err) {
+          console.error("Failed to add tag", err);
+          setTags(tags); // revert
+          if (setToastMessage) {
+            setToastMessage("Failed to save tag");
+            setTimeout(() => setToastMessage(""), 3000);
+          }
+        } finally {
+          setIsUpdatingTags(false);
+        }
+      }
+    }
+  };
+
+  const handleTagRemove = async (tagToRemove) => {
+    const newTags = tags.filter(t => t !== tagToRemove);
+    setTags(newTags);
+    try {
+      setIsUpdatingTags(true);
+      await updateWorkspaceTags(result.workspace_id, newTags);
+    } catch (err) {
+      console.error("Failed to remove tag", err);
+      setTags(tags); // revert
+      if (setToastMessage) {
+        setToastMessage("Failed to remove tag");
+        setTimeout(() => setToastMessage(""), 3000);
+      }
+    } finally {
+      setIsUpdatingTags(false);
+    }
   };
 
   const workspaceId = result?.workspace_id;
@@ -35,11 +95,14 @@ export default function WorkspaceDashboard({
   const totalCriteria = Object.keys(criteria).length;
   const passedCriteria = Object.values(criteria).filter(x => x.pass).length;
   const baseScore = totalCriteria > 0 ? Math.round((passedCriteria / totalCriteria) * 100) : 75;
-  const startupScore = Math.min(96, Math.max(54, baseScore));
 
   const marketPotential = Math.min(95, Math.max(60, 100 - (result?.research?.existing_solutions?.length || 0) * 7));
   const technicalFeasibility = Math.min(95, Math.max(50, 60 + (result?.plan?.tech_stack?.length || 0) * 4));
-  const businessViability = criteria?.viability?.pass ? 85 : criteria?.profitability?.pass ? 80 : 65;
+  const businessViability = criteria?.scalable?.pass ? (criteria?.actionable?.pass ? 85 : 75) : 65;
+  
+  // COMPOSITE SCORE FORMULA — must stay in sync with agents.py:generate_founder_insight.
+  // If you change this calculation, update the matching formula there too.
+  const startupScore = Math.round((baseScore + marketPotential + technicalFeasibility + businessViability) / 4);
   
   const flaggedCount = result?.critique?.flagged_issues?.length || 0;
   const riskLevel = flaggedCount === 0 ? "Low" : flaggedCount <= 2 ? "Medium" : "High";
@@ -64,7 +127,199 @@ export default function WorkspaceDashboard({
   };
 
   const handleExport = () => {
-    window.print();
+    // Build a comprehensive report in a new window
+    const research = result?.research || {};
+    const plan = result?.plan || {};
+    const critique = result?.critique || {};
+    const roadmap = plan?.roadmap || [];
+    const techStack = plan?.tech_stack || [];
+    const components = plan?.architecture_components || [];
+    const sources = research?.sources || [];
+    const githubRepos = research?.github_repos || [];
+    const apisDatasets = research?.apis_datasets || [];
+
+    const reportHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${idea} — Full Analysis Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #fff; color: #1a1a2e; padding: 48px; line-height: 1.7; max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 28px; font-weight: 800; margin-bottom: 6px; color: #0f0f23; }
+    h2 { font-size: 20px; font-weight: 700; margin: 36px 0 14px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; color: #1a1a2e; }
+    h3 { font-size: 16px; font-weight: 700; margin: 20px 0 8px; color: #374151; }
+    p, li { font-size: 14px; color: #4b5563; }
+    .subtitle { font-size: 13px; color: #9ca3af; margin-bottom: 24px; }
+    .score-row { display: flex; gap: 24px; margin: 16px 0 28px; flex-wrap: wrap; }
+    .score-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 20px; min-width: 160px; flex: 1; }
+    .score-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; font-weight: 600; }
+    .score-card .value { font-size: 28px; font-weight: 800; color: #1a1a2e; margin-top: 4px; }
+    .section-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 12px 0; }
+    .section-card h4 { font-size: 15px; font-weight: 700; color: #1f2937; margin-bottom: 6px; }
+    .section-card p { font-size: 13px; color: #6b7280; }
+    .badge { display: inline-block; background: #eef2ff; color: #4338ca; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 3px 4px 3px 0; }
+    .badge-green { background: #ecfdf5; color: #059669; }
+    .badge-red { background: #fef2f2; color: #dc2626; }
+    ul { padding-left: 20px; margin: 8px 0; }
+    li { margin-bottom: 6px; }
+    .roadmap-phase { border-left: 3px solid #6366f1; padding: 16px 0 16px 20px; margin: 12px 0; }
+    .roadmap-phase .phase-title { font-size: 16px; font-weight: 700; color: #1f2937; }
+    .roadmap-phase .phase-duration { font-size: 12px; color: #6366f1; font-weight: 600; margin-bottom: 10px; }
+    .task-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin: 8px 0; }
+    .task-item h5 { font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
+    .task-item .desc { font-size: 13px; color: #4b5563; }
+    .task-item .rationale { font-size: 12px; color: #6366f1; margin-top: 8px; padding: 8px 12px; background: #eef2ff; border-radius: 6px; }
+    .tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+    .tech-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+    .tech-item .name { font-weight: 700; color: #1f2937; font-size: 14px; }
+    .tech-item .reason { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .source-link { color: #4338ca; text-decoration: none; font-size: 13px; }
+    .source-link:hover { text-decoration: underline; }
+    .footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #9ca3af; }
+    @media print { body { padding: 24px; } }
+  </style>
+</head>
+<body>
+  <h1>${idea}</h1>
+  <p class="subtitle">Full Analysis Report • Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} • Insights Copilot</p>
+
+  <!-- Score Overview -->
+  <div class="score-row">
+    <div class="score-card"><div class="label">Startup Score</div><div class="value">${startupScore}%</div></div>
+    <div class="score-card"><div class="label">Market Potential</div><div class="value">${marketPotential}%</div></div>
+    <div class="score-card"><div class="label">Tech Feasibility</div><div class="value">${technicalFeasibility}%</div></div>
+    <div class="score-card"><div class="label">Business Viability</div><div class="value">${businessViability}%</div></div>
+    <div class="score-card"><div class="label">Risk Level</div><div class="value">${riskLevel}</div></div>
+  </div>
+
+  <!-- Verdict -->
+  <h2>Verdict: ${getVerdictLabel()}</h2>
+  <p>${getVerdictText()}</p>
+
+  <!-- Problem Validation -->
+  <h2>Problem Validation</h2>
+  <p>${research.problem_validation || 'N/A'}</p>
+
+  <!-- Market Research -->
+  <h2>Market Research Summary</h2>
+  <p>${research.market_research_summary || 'N/A'}</p>
+
+  <!-- Existing Solutions -->
+  ${research.existing_solutions && research.existing_solutions.length > 0 ? `
+  <h2>Existing Solutions</h2>
+  ${research.existing_solutions.map(s => `
+    <div class="section-card">
+      <h4>${s.name || 'Unknown'}</h4>
+      <p>${s.description || ''}</p>
+      ${s.gap ? `<p style="margin-top:6px;color:#dc2626;font-size:12px;font-weight:600;">Gap: ${s.gap}</p>` : ''}
+    </div>
+  `).join('')}` : ''}
+
+  <!-- Research Gaps -->
+  ${research.research_gaps && research.research_gaps.length > 0 ? `
+  <h2>Research Gaps</h2>
+  <ul>${research.research_gaps.map(g => `<li>${typeof g === 'string' ? g : g.gap || ''} ${g.citation || ''}</li>`).join('')}</ul>
+  ` : ''}
+
+  <!-- Innovation Opportunities -->
+  ${research.innovation_opportunities && research.innovation_opportunities.length > 0 ? `
+  <h2>Innovation Opportunities</h2>
+  ${research.innovation_opportunities.map(o => `
+    <div class="section-card">
+      <p><strong>Approach:</strong> ${o.approach || ''}</p>
+      <p style="font-size:12px;color:#6366f1;margin-top:4px;">Addresses: ${o.addresses || ''}</p>
+    </div>
+  `).join('')}` : ''}
+
+  <!-- Critique -->
+  <h2>Technical Critique</h2>
+  <p><strong>Overall Verdict:</strong> <span class="badge ${critique.overall_verdict === 'ready' ? 'badge-green' : 'badge-red'}">${critique.overall_verdict || 'N/A'}</span></p>
+  ${Object.entries(critique.criteria || {}).map(([key, val]) => `
+    <div class="section-card">
+      <h4>${key.charAt(0).toUpperCase() + key.slice(1)} <span class="badge ${val?.pass ? 'badge-green' : 'badge-red'}">${val?.pass ? 'PASS' : 'FAIL'}</span></h4>
+      <p>${val?.note || ''}</p>
+    </div>
+  `).join('')}
+  ${critique.flagged_issues && critique.flagged_issues.length > 0 ? `<h3>Flagged Issues</h3><ul>${critique.flagged_issues.map(i => `<li>${i}</li>`).join('')}</ul>` : ''}
+  ${critique.suggested_fixes && critique.suggested_fixes.length > 0 ? `<h3>Suggested Fixes</h3><ul>${critique.suggested_fixes.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}
+
+  <!-- Architecture -->
+  <h2>Architecture Overview</h2>
+  <p>${plan.architecture || 'N/A'}</p>
+
+  <!-- Tech Stack -->
+  ${techStack.length > 0 ? `
+  <h2>Recommended Tech Stack</h2>
+  <div class="tech-grid">
+    ${techStack.map(tech => {
+      const parts = tech.split(/[:-]/);
+      const name = parts[0].trim();
+      const reason = parts.slice(1).join('-').trim();
+      return `<div class="tech-item"><div class="name">${name}</div>${reason ? `<div class="reason">${reason}</div>` : ''}</div>`;
+    }).join('')}
+  </div>` : ''}
+
+  <!-- Architecture Components -->
+  ${components.length > 0 ? `
+  <h2>Core Components & Services</h2>
+  ${components.map(c => `
+    <div class="section-card">
+      <h4>${c.component} <span class="badge">${c.technology}</span></h4>
+      <p>${c.rationale || ''}</p>
+    </div>
+  `).join('')}` : ''}
+
+  <!-- Roadmap -->
+  ${roadmap.length > 0 ? `
+  <h2>Execution Roadmap</h2>
+  ${roadmap.map((phase, i) => `
+    <div class="roadmap-phase">
+      <div class="phase-duration">Phase ${i + 1} • ${phase.duration || ''}</div>
+      <div class="phase-title">${phase.milestone}</div>
+      ${phase.tasks && phase.tasks.length > 0 ? phase.tasks.map(task => `
+        <div class="task-item">
+          <h5>${typeof task === 'string' ? task : task.title || ''}</h5>
+          ${typeof task !== 'string' && task.description ? `<div class="desc">${task.description}</div>` : ''}
+          ${typeof task !== 'string' && task.rationale ? `<div class="rationale">${task.rationale}</div>` : ''}
+        </div>
+      `).join('') : `<p>${phase.description || 'No tasks specified.'}</p>`}
+    </div>
+  `).join('')}` : ''}
+
+  <!-- Sources -->
+  ${sources.length > 0 ? `
+  <h2>Sources & References</h2>
+  <ul>${sources.map((s, i) => `<li>[${i + 1}] <a class="source-link" href="${s.url}" target="_blank">${s.title || s.url}</a> <span class="badge">${s.source_type || 'web'}</span></li>`).join('')}</ul>
+  ` : ''}
+
+  <!-- GitHub Repos -->
+  ${githubRepos.length > 0 ? `
+  <h3>GitHub Repositories</h3>
+  <ul>${githubRepos.map(r => `<li><a class="source-link" href="${r.url}" target="_blank">${r.name}</a> — ${r.why_relevant || ''}</li>`).join('')}</ul>
+  ` : ''}
+
+  <!-- APIs & Datasets -->
+  ${apisDatasets.length > 0 ? `
+  <h3>APIs & Datasets</h3>
+  <ul>${apisDatasets.map(a => `<li><a class="source-link" href="${a.url}" target="_blank">${a.name}</a> <span class="badge">${a.type || ''}</span></li>`).join('')}</ul>
+  ` : ''}
+
+  <div class="footer">Generated by Insights Copilot • ${new Date().toISOString()}</div>
+</body>
+</html>`;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(reportHTML);
+      printWindow.document.close();
+      // Auto-trigger print dialog after content loads
+      printWindow.onload = () => {
+        setTimeout(() => printWindow.print(), 500);
+      };
+    }
   };
 
   const getVerdictLabel = () => {
@@ -84,7 +339,9 @@ export default function WorkspaceDashboard({
   };
 
   return (
-    <div className="flex-1 flex flex-col gap-8 font-sans max-w-7xl mx-auto w-full select-none print:p-0">
+    <div className="flex flex-row w-full items-start">
+      {/* Main Content Dashboard */}
+      <div className={`flex-1 flex flex-col gap-8 font-sans w-full max-w-full mx-auto select-none print:p-0 transition-all duration-300 ${activePanel ? 'hidden lg:flex overflow-hidden' : ''}`}>
       
       {/* Header bar actions */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-border)] pb-5 shrink-0 print:hidden">
@@ -118,6 +375,25 @@ export default function WorkspaceDashboard({
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>Analysis completed • Just now</span>
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {tags.map(tag => (
+              <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                {tag}
+                <button onClick={() => handleTagRemove(tag)} disabled={isUpdatingTags} className="text-slate-400 hover:text-red-500 ml-1 focus:outline-none">
+                  &times;
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleTagAdd}
+              disabled={isUpdatingTags}
+              placeholder="Add tag..."
+              className="px-2.5 py-1 rounded-full bg-transparent border border-dashed border-slate-300 dark:border-slate-700 text-xs font-medium focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 w-24 text-slate-700 dark:text-white"
+            />
+          </div>
         </div>
 
         {/* Action Row */}
@@ -158,6 +434,31 @@ export default function WorkspaceDashboard({
         </div>
       </header>
 
+      <div className="flex gap-4 border-b border-[var(--color-border)] pb-px -mt-4 mb-2 w-full">
+        <button
+          onClick={() => setActiveTab('analysis')}
+          className={`pb-3 px-4 text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === 'analysis'
+              ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)] font-bold'
+              : 'text-slate-400 hover:text-[var(--color-accent)]'
+          }`}
+        >
+          Analysis
+        </button>
+        <button
+          onClick={() => setActiveTab('executive')}
+          className={`pb-3 px-4 text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === 'executive'
+              ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)] font-bold'
+              : 'text-slate-400 hover:text-[var(--color-accent)]'
+          }`}
+        >
+          Executive Insights
+        </button>
+      </div>
+
+      {activeTab === 'executive' && (
+        <>
       {/* Row 1: Executive Summary & Brutal Verdict */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
         
@@ -259,11 +560,97 @@ export default function WorkspaceDashboard({
 
       </div>
 
-      {/* Row 2: Collapsible Accordion Sections + Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-        
-        {/* Accordions (Left Pane, 3 Cols) */}
-        <div className="lg:col-span-3 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch w-full mt-6">
+            {/* Radar Chart */}
+            <div className="theme-card flex flex-col items-center justify-center pb-4">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">At a Glance</span>
+              <div className="relative w-40 h-40 flex items-center justify-center">
+                <svg className="w-40 h-40" viewBox="0 0 100 100">
+                  {/* Background grid concentric circles */}
+                  <circle cx="50" cy="50" r="40" className="stroke-slate-800" strokeWidth="0.5" fill="none" />
+                  <circle cx="50" cy="50" r="30" className="stroke-slate-800/60" strokeWidth="0.5" fill="none" />
+                  <circle cx="50" cy="50" r="20" className="stroke-slate-800/40" strokeWidth="0.5" fill="none" />
+                  <circle cx="50" cy="50" r="10" className="stroke-slate-800/20" strokeWidth="0.5" fill="none" />
+                  
+                  {/* Axis straight lines */}
+                  <line x1="50" y1="10" x2="50" y2="90" className="stroke-slate-800/75" strokeWidth="0.5" />
+                  <line x1="10" y1="50" x2="90" y2="50" className="stroke-slate-800/75" strokeWidth="0.5" />
+                  
+                  {/* Labels */}
+                  <text x="50" y="8" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">MARKET</text>
+                  <text x="92" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="start">BUSINESS</text>
+                  <text x="50" y="96" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">RISK</text>
+                  <text x="8" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="end">TECH</text>
+
+                  {/* Scaling variables coordinates polygon */}
+                  <polygon
+                    points={`${ptMarket.x},${ptMarket.y} ${ptBusiness.x},${ptBusiness.y} ${ptRisk.x},${ptRisk.y} ${ptTech.x},${ptTech.y}`}
+                    className="fill-[var(--color-accent-bg)]/25 stroke-[var(--color-accent)]"
+                    strokeWidth="1.2"
+                  />
+                  
+                  {/* Data points */}
+                  <circle cx={ptMarket.x} cy={ptMarket.y} r="1.2" className="fill-[var(--color-accent)]" />
+                  <circle cx={ptBusiness.x} cy={ptBusiness.y} r="1.2" className="fill-[var(--color-accent)]" />
+                  <circle cx={ptRisk.x} cy={ptRisk.y} r="1.2" className="fill-[var(--color-accent)]" />
+                  <circle cx={ptTech.x} cy={ptTech.y} r="1.2" className="fill-[var(--color-accent)]" />
+                </svg>
+              </div>
+              
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3 text-[10px] font-bold text-slate-500 select-none">
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full"></span> Market: {marketPotential}</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full"></span> Tech: {technicalFeasibility}</span>
+              </div>
+            </div>
+
+            {/* Top Actions list */}
+            <div className="theme-card flex-1 flex flex-col justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Top Actions</h3>
+                
+                {result?.critique?.suggested_fixes && result.critique.suggested_fixes.length > 0 ? (
+                  <ul className="space-y-3.5">
+                    {result.critique.suggested_fixes.slice(0, 3).map((fix, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-xs">
+                        <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] border border-[var(--color-border-hover)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <p className="theme-text-body font-semibold leading-relaxed truncate" title={fix}>
+                          {fix}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ul className="space-y-3.5">
+                    <li className="flex items-start gap-2.5 text-xs">
+                      <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">1</span>
+                      <span className="theme-text-body font-semibold">Validate with target MVP hooks</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs">
+                      <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">2</span>
+                      <span className="theme-text-body font-semibold">Interview 20+ beta target audience</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs">
+                      <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">3</span>
+                      <span className="theme-text-body font-semibold">Build core modular landing page</span>
+                    </li>
+                  </ul>
+                )}
+              </div>
+
+              <button className="w-full py-2.5 mt-5 border border-[var(--color-border)] rounded-xl text-xs font-bold theme-text-title bg-[var(--bg-surface)] hover:border-[var(--color-border-hover)] transition-all cursor-pointer shadow-inner">
+                View All Recommendations
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'analysis' && (
+        <>
+      {/* Accordions (Left Pane, 3 Cols) */}
+      <div className="w-full space-y-4">
           
           {/* Technical Analysis Section */}
           <div className="theme-card !p-0 overflow-hidden border border-[var(--color-border)] rounded-2xl bg-[var(--bg-surface)]">
@@ -292,7 +679,7 @@ export default function WorkspaceDashboard({
             
             {expanded.techAnalysis && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45 space-y-6">
-                <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={workspaceId} onRefreshSuccess={onRefreshResearch} />
+                <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={workspaceId} onRefreshSuccess={onRefreshResearch} openPanel={openPanel} experienceLevel={experienceLevel} />
               </div>
             )}
           </div>
@@ -324,7 +711,7 @@ export default function WorkspaceDashboard({
 
             {expanded.architecture && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
-                <ArchitectureCard status={status} plan={result?.plan} />
+                <ArchitectureCard status={status} plan={result?.plan} openPanel={openPanel} />
               </div>
             )}
           </div>
@@ -356,7 +743,7 @@ export default function WorkspaceDashboard({
 
             {expanded.roadmap && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
-                <PlanCard status={status} roadmap={result?.plan?.roadmap} />
+                <PlanCard status={status} roadmap={result?.plan?.roadmap} plan={result?.plan} openPanel={openPanel} currentMilestoneIndex={result?.current_milestone_index || 0} onMilestoneComplete={onMilestoneComplete} milestoneCompleting={milestoneCompleting} />
               </div>
             )}
           </div>
@@ -388,113 +775,37 @@ export default function WorkspaceDashboard({
 
             {expanded.resources && (
               <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
-                <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} />
+                <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} openPanel={openPanel} />
               </div>
             )}
           </div>
 
         </div>
 
-        {/* Sidebar Panel (Right Pane, 1 Col) */}
-        <div className="theme-card flex flex-col gap-6 sticky top-24 print:static">
-          
-          {/* Radar Chart */}
-          <div className="flex flex-col items-center justify-center pb-4 border-b border-[var(--color-border)]">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">At a Glance</span>
-            <div className="relative w-40 h-40 flex items-center justify-center">
-              <svg className="w-40 h-40" viewBox="0 0 100 100">
-                {/* Background grid concentric circles */}
-                <circle cx="50" cy="50" r="40" className="stroke-slate-800" strokeWidth="0.5" fill="none" />
-                <circle cx="50" cy="50" r="30" className="stroke-slate-800/60" strokeWidth="0.5" fill="none" />
-                <circle cx="50" cy="50" r="20" className="stroke-slate-800/40" strokeWidth="0.5" fill="none" />
-                <circle cx="50" cy="50" r="10" className="stroke-slate-800/20" strokeWidth="0.5" fill="none" />
-                
-                {/* Axis straight lines */}
-                <line x1="50" y1="10" x2="50" y2="90" className="stroke-slate-800/75" strokeWidth="0.5" />
-                <line x1="10" y1="50" x2="90" y2="50" className="stroke-slate-800/75" strokeWidth="0.5" />
-                
-                {/* Labels */}
-                <text x="50" y="8" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">MARKET</text>
-                <text x="92" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="start">BUSINESS</text>
-                <text x="50" y="96" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="middle">RISK</text>
-                <text x="8" y="52" className="text-[5.5px] fill-slate-400 font-bold" textAnchor="end">TECH</text>
-
-                {/* Scaling variables coordinates polygon */}
-                <polygon
-                  points={`${ptMarket.x},${ptMarket.y} ${ptBusiness.x},${ptBusiness.y} ${ptRisk.x},${ptRisk.y} ${ptTech.x},${ptTech.y}`}
-                  className="fill-[var(--color-accent-bg)]/25 stroke-[var(--color-accent)]"
-                  strokeWidth="1.2"
-                />
-                
-                {/* Data points */}
-                <circle cx={ptMarket.x} cy={ptMarket.y} r="1.2" className="fill-[var(--color-accent)]" />
-                <circle cx={ptBusiness.x} cy={ptBusiness.y} r="1.2" className="fill-[var(--color-accent)]" />
-                <circle cx={ptRisk.x} cy={ptRisk.y} r="1.2" className="fill-[var(--color-accent)]" />
-                <circle cx={ptTech.x} cy={ptTech.y} r="1.2" className="fill-[var(--color-accent)]" />
-              </svg>
-            </div>
-            
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3 text-[10px] font-bold text-slate-500 select-none">
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full"></span> Market: {marketPotential}</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full"></span> Tech: {technicalFeasibility}</span>
-            </div>
-          </div>
-
-          {/* Top Actions list */}
-          <div className="flex-1 flex flex-col justify-between">
-            <div>
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Top Actions</h3>
-              
-              {result?.critique?.suggested_fixes && result.critique.suggested_fixes.length > 0 ? (
-                <ul className="space-y-3.5">
-                  {result.critique.suggested_fixes.slice(0, 3).map((fix, idx) => (
-                    <li key={idx} className="flex items-start gap-2.5 text-xs">
-                      <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] border border-[var(--color-border-hover)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">
-                        {idx + 1}
-                      </span>
-                      <p className="theme-text-body font-semibold leading-relaxed truncate" title={fix}>
-                        {fix}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <ul className="space-y-3.5">
-                  <li className="flex items-start gap-2.5 text-xs">
-                    <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">1</span>
-                    <span className="theme-text-body font-semibold">Validate with target MVP hooks</span>
-                  </li>
-                  <li className="flex items-start gap-2.5 text-xs">
-                    <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">2</span>
-                    <span className="theme-text-body font-semibold">Interview 20+ beta target audience</span>
-                  </li>
-                  <li className="flex items-start gap-2.5 text-xs">
-                    <span className="w-5 h-5 rounded-full bg-[var(--color-accent-bg)] text-[var(--color-accent)] flex items-center justify-center font-bold shrink-0 text-[10px] mt-0.5">3</span>
-                    <span className="theme-text-body font-semibold">Build core modular landing page</span>
-                  </li>
-                </ul>
-              )}
-            </div>
-
-            <button className="w-full py-2.5 mt-5 border border-[var(--color-border)] rounded-xl text-xs font-bold theme-text-title bg-[var(--bg-surface)] hover:border-[var(--color-border-hover)] transition-all cursor-pointer shadow-inner">
-              View All Recommendations
-            </button>
-          </div>
-
-        </div>
-
-      </div>
-
       {/* Row 3: Follow Up AI Consulting Chat */}
-      <div className="w-full shrink-0 print:hidden">
+      <div className="w-full shrink-0 print:hidden mt-6">
         <FollowUpChat
           workspaceId={workspaceId}
           initialHistory={result?.chat_history || []}
           idea={idea}
           primaryModel={primaryModel}
+          experienceLevel={experienceLevel}
         />
       </div>
+        </>
+      )}
 
+      </div>
+
+      {/* Slide-in Detail Panel */}
+      {activePanel && (
+        <DetailPanel 
+          title={activePanel.title} 
+          onClose={() => setActivePanel(null)}
+        >
+          {activePanel.content}
+        </DetailPanel>
+      )}
     </div>
   );
 }

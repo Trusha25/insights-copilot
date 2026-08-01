@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from db import get_telegram_link, get_workspace, update_milestone_index
+from db import get_telegram_link, get_workspace, mark_milestone_complete
 
 async def done_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -25,9 +25,13 @@ async def done_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=chat_id, text="You have already completed all milestones!")
         return
 
-    # Increment index
+    # Mark milestone complete (updates both workspaces and telegram_links)
+    try:
+        mark_milestone_complete(link["workspace_id"])
+    except ValueError as e:
+        await context.bot.send_message(chat_id=chat_id, text=str(e))
+        return
     new_index = current_index + 1
-    update_milestone_index(chat_id, new_index)
 
     if new_index >= len(roadmap):
         await context.bot.send_message(

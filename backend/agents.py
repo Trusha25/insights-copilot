@@ -26,7 +26,7 @@ logger.info(f"[STARTUP] GROQ_API_KEY present: {bool(api_key and api_key != 'your
 logger.info(f"[STARTUP] TAVILY_API_KEY present: {bool(_tavily_key)}, valid (non-placeholder): {bool(_tavily_key and _tavily_key != 'your_tavily_api_key_here')}")
 logger.info(f"[STARTUP] GITHUB_TOKEN present: {bool(_github_token)}, valid (non-placeholder): {bool(_github_token and _github_token != 'your_github_token_here')}")
 
-async def call_llm_json(system_prompt: str, user_prompt: str, retry: bool = True) -> dict:
+async def call_llm_json(system_prompt: str, user_prompt: str, retry: bool = True, temperature: float = 0.7) -> dict:
     if not client:
         raise ValueError("Groq client not configured")
         
@@ -37,7 +37,7 @@ async def call_llm_json(system_prompt: str, user_prompt: str, retry: bool = True
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt + prompt_suffix}
             ],
-            temperature=0.7,
+            temperature=temperature,
             response_format={"type": "json_object"}
         )
         return res.choices[0].message.content
@@ -337,16 +337,16 @@ Search Results: {json.dumps(all_results)}
 
 Generate JSON:
 {{
-  "problem_validation": "string, 2-3 sentences, with [n] citations",
-  "market_research_summary": "string, 3-5 sentences, with [n] citations",
+  "problem_validation": "string, 4-6 detailed, intellectual sentences deeply analyzing the problem space with [n] citations",
+  "market_research_summary": "string, 6-8 sentences offering a comprehensive and intellectual market analysis with [n] citations",
   "existing_solutions": [
-    {{ "name": "string", "description": "string, 1 sentence — what it does + why it doesn't fully address this idea, with [n] citation", "gap": "string, 1 sentence" }}
+    {{ "name": "string", "description": "string, 2-3 sentences — intellectual analysis of what it does + why it falls short, with [n] citation", "gap": "string, 1 sentence" }}
   ],
   "research_gaps": [
-    {{ "gap": "string, 1 sentence describing an unresolved problem from academic literature", "citation": "[n]" }}
+    {{ "gap": "string, 1-2 sentences describing an unresolved problem from academic literature in high detail", "citation": "[n]" }}
   ],
   "innovation_opportunities": [
-    {{ "approach": "string, 1 sentence — a specific method or technique", "addresses": "string — which research_gap or existing_solution gap this responds to" }}
+    {{ "approach": "string, 1-2 sentences — a specific, highly intellectual method or technique", "addresses": "string — which research_gap or existing_solution gap this responds to" }}
   ],
   "sources": [
     {{ "title": "string", "url": "string", "source_type": "web | github | arxiv | semantic_scholar" }}
@@ -404,6 +404,11 @@ async def planner_agent(idea: str, research: dict) -> dict:
             "   - Ensure all subgraphs use double-quoted labels (e.g., `subgraph Client_Layer[\"Client Layer\"]`) to prevent parsing syntax errors.\n"
             "4. SYSTEMATIC GROUNDING: Recommending libraries or databases must include domain-specific technical justifications. "
             "   Cross-reference findings from the research phase (e.g., open source libraries, APIs, datasets) in the plan.\n"
+            "5. MANDATORY CITATION: At least 3 of the roadmap tasks across all milestones MUST explicitly reference "
+            "a specific named item from the Research JSON below (an exact repo name, paper title, API name, or dataset) — "
+            "not a paraphrase, the literal name. If Research contains fewer than 3 usable items, state in that task's "
+            "rationale that no verified source exists and flag it as an assumption.\n"
+            "6. COMPREHENSIVE 5-8 PHASE ROADMAP: You MUST generate exactly 5 to 8 phases. Each phase milestone name must explicitly list the exact product features being built in that phase (e.g. 'Phase 3: Core Features & Scope (Study Plan, Quizzes, Analytics)'). DO NOT output only 2 or 3 phases. DO NOT output vague milestone names like 'Develop Interface'.\n"
         )
 
         few_shot_examples = """
@@ -466,6 +471,67 @@ Plan JSON:
     ]
   }
 }
+
+### FEW-SHOT EXAMPLE 2 (Smart Hostel Food Waste Tracker):
+Idea: "Smart Hostel Food Waste Tracker using computer vision on plate scans"
+Plan JSON:
+{
+  "architecture": "An edge-to-cloud IoT pipeline combining local plate scanning via Raspberry Pi cameras and centralized cloud analytics. Edge devices perform lightweight image capture and preprocessing before streaming to a cloud backend for heavy computer vision inference and real-time dashboard updates.",
+  "tech_stack": [
+    "Raspberry Pi 4 / Camera Module 3 - Hardware layer for plate capture",
+    "OpenCV & Python - Edge image processing and payload formatting",
+    "FastAPI & WebSockets - High-throughput ingestion API for edge streams",
+    "YOLOv8 - Object detection for food volume and type estimation",
+    "PostgreSQL & TimescaleDB - Time-series storage for waste metrics",
+    "Next.js & Tailwind - Admin dashboard for hostel management"
+  ],
+  "architecture_components": [
+    {
+      "component": "Edge Capture Node",
+      "technology": "Python / OpenCV",
+      "rationale": "Required to handle hardware triggers, compress images, and maintain robust network connections over spotty hostel Wi-Fi."
+    },
+    {
+      "component": "Inference Engine",
+      "technology": "YOLOv8 via PyTorch",
+      "rationale": "Provides fast, accurate bounding boxes and area calculations on food scraps, offloading processing from edge devices."
+    },
+    {
+      "component": "Time-Series Store",
+      "technology": "TimescaleDB",
+      "rationale": "Optimizes aggregation queries (e.g., 'total waste per week') which are critical for hostel food purchasing adjustments."
+    }
+  ],
+  "roadmap": [
+    {
+      "milestone": "Build Edge Image Ingestion Pipeline",
+      "duration": "7 days",
+      "tasks": [
+        {
+          "title": "Configure Raspberry Pi Camera Polling",
+          "description": "Set up a Python daemon using OpenCV to capture plate images on a hardware button trigger.",
+          "rationale": "Forms the foundational hardware-software bridge for the entire data pipeline."
+        },
+        {
+          "title": "Implement WebSocket Upload Service",
+          "description": "Build a FastAPI WebSocket endpoint to receive compressed image payloads from the edge nodes.",
+          "rationale": "Ensures low-latency streaming and allows immediate ACK responses back to the hardware."
+        }
+      ]
+    }
+  ],
+  "architecture_mermaid": "graph TD\\n  classDef client fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;\\n  classDef service fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#3730a3;\\n  classDef ai fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8;\\n  classDef data fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#065f46;\\n  classDef ext fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;\\n\\n  subgraph Edge_Layer[\\\"IoT Edge\\\"]\\n    A[Raspberry Pi Camera]:::client\\n    B[OpenCV Preprocessor]:::client\\n  end\\n\\n  subgraph Backend_Services[\\\"Cloud Backend\\\"]\\n    C[FastAPI Ingestion]:::service\\n    E[Dashboard API]:::service\\n  end\\n\\n  subgraph AI_Layer[\\\"AI Inference\\\"]\\n    D[YOLOv8 Processor]:::ai\\n  end\\n\\n  subgraph Data_Layer[\\\"Data Stores\\\"]\\n    F[TimescaleDB]:::data\\n  end\\n\\n  A -->|Raw Image| B\\n  B -->|WebSocket Stream| C\\n  C -->|Inference Req| D\\n  D -->|Waste Metrics| F\\n  E -->|Query Aggregates| F",
+  "timeline": "8 weeks total development time with 1 hardware/IoT engineer and 1 backend/AI engineer.",
+  "documentation": {
+    "overview": "Technical execution plan for computer vision plate scanning and food waste analytics.",
+    "sections": [
+      {
+        "heading": "Network Resilience",
+        "content": "Edge nodes use a local SQLite buffer to store images if the hostel Wi-Fi drops, syncing to the cloud API once connection is restored."
+      }
+    ]
+  }
+}
 """
 
         user_prompt = f"""
@@ -495,13 +561,13 @@ JSON Schema:
   ],
   "roadmap": [
     {{
-      "milestone": "string - non-generic milestone name representing the engineering challenge",
-      "duration": "string - e.g. '4 days'",
+      "milestone": "string - e.g., 'Phase 2: Core Features (Study Plan, Quizzes, Tracking)'. MUST generate exactly 5 to 8 distinct phases, heavily specifying exact application features.",
+      "duration": "string - e.g. '2 weeks'",
       "tasks": [
         {{
           "title": "string - concrete task title",
-          "description": "string - technical action detail",
-          "rationale": "string - why this task exists and its contribution to the specific project"
+          "description": "string - highly detailed and intellectual technical action plan (3-5 sentences) as if architected by a senior staff engineer",
+          "rationale": "string - deep technical rationale and justification (2-4 sentences) explaining why this is the optimal approach"
         }}
       ]
     }}
@@ -518,7 +584,7 @@ JSON Schema:
   }}
 }}
 """
-        result = await call_llm_json(system_prompt, user_prompt)
+        result = await call_llm_json(system_prompt, user_prompt, temperature=0.3)
         logger.info("Successfully completed planner_agent")
         return result
     except Exception as e:
@@ -539,15 +605,9 @@ async def critic_agent(idea: str, research: dict, plan: dict) -> dict:
         "suggested_fixes": []
     }
     try:
-        # Truncate large dicts to avoid blowing past token limits
+        # Serialize dicts to JSON directly without string truncation which causes invalid JSON
         research_str = json.dumps(research)
         plan_str = json.dumps(plan)
-        if len(research_str) > 12000:
-            logger.warning(f"[critic_agent] Truncating research from {len(research_str)} to 12000 chars")
-            research_str = research_str[:12000] + '...}'
-        if len(plan_str) > 12000:
-            logger.warning(f"[critic_agent] Truncating plan from {len(plan_str)} to 12000 chars")
-            plan_str = plan_str[:12000] + '...}'
         
         total_prompt_chars = len(research_str) + len(plan_str)
         logger.info(f"[critic_agent] Prompt payload size: research={len(research_str)} chars, plan={len(plan_str)} chars, total={total_prompt_chars} chars")
@@ -584,18 +644,24 @@ Generate JSON:
         logger.error(f"[critic_agent] {type(e).__name__}: {e}", exc_info=True)
         return fallback
 
-async def mentor_agent(idea: str, research: dict, plan: dict, question: str) -> dict:
+async def mentor_agent(idea: str, research: dict, plan: dict, question: str, experience_level: str = "intermediate") -> dict:
     logger.info("Starting mentor_agent")
     fallback = {
         "answer": "Unable to generate — please retry.",
         "learning_resources": []
     }
     try:
+        level_instruction = {
+            "beginner": "The user is a beginner. Use plain language, no unexplained jargon, 3-4 short sentences, and use an analogy if it helps.",
+            "intermediate": "The user has intermediate experience. Assume basic software and startup familiarity.",
+            "advanced": "The user is advanced. Be precise and dense, skip basic definitions."
+        }.get(experience_level, "The user has intermediate experience. Assume basic software and startup familiarity.")
+        
         system_prompt = (
             "You are an expert Startup Mentor. Answer a specific follow-up question from the user. "
             "Ground your answer in the provided research and plan. Don't answer from generic knowledge if the provided dicts contain the answer. "
             "learning_resources: 0-3 items, only include if genuinely relevant to the question. "
-            "Keep answer concise."
+            f"Keep answer concise. {level_instruction}"
         )
         user_prompt = f"""
 Idea: "{idea}"
@@ -617,3 +683,135 @@ Generate JSON:
     except Exception as e:
         logger.error(f"Failed mentor_agent: {e}")
         return fallback
+
+def compute_milestone_pace(all_completions: list[dict]) -> dict:
+    try:
+        pool_deltas = []
+        qualifying_workspace_count = 0
+        
+        for ws in all_completions:
+            completions = ws.get("completions", [])
+            if len(completions) >= 2:
+                # Ensure sorted by completed_at
+                completions_sorted = sorted(
+                    completions,
+                    key=lambda x: datetime.fromisoformat(x["completed_at"].replace("Z", "+00:00"))
+                )
+                
+                qualifying_workspace_count += 1
+                for i in range(1, len(completions_sorted)):
+                    prev_ts = datetime.fromisoformat(completions_sorted[i-1]["completed_at"].replace("Z", "+00:00"))
+                    curr_ts = datetime.fromisoformat(completions_sorted[i]["completed_at"].replace("Z", "+00:00"))
+                    delta_days = (curr_ts - prev_ts).total_seconds() / (24 * 3600)
+                    pool_deltas.append(delta_days)
+                    
+        if not pool_deltas:
+            return {"avg_days": None, "label": "Not enough data", "workspace_count": 0}
+            
+        avg_days = sum(pool_deltas) / len(pool_deltas)
+        avg_days = round(avg_days, 1)
+        
+        return {"avg_days": avg_days, "label": f"{avg_days} days per milestone", "workspace_count": qualifying_workspace_count}
+    except Exception as e:
+        logger.error(f"Failed to compute milestone pace: {e}")
+        return {"avg_days": None, "label": "Not enough data", "workspace_count": 0}
+
+async def generate_founder_insight(workspace_summaries: list[dict]) -> dict:
+    logger.info("Starting generate_founder_insight")
+    if len(workspace_summaries) < 2:
+        return {"total_ideas": len(workspace_summaries), "insufficient_data": True}
+        
+    total_ideas = len(workspace_summaries)
+    
+    scores = []
+    weak_criteria = []
+    tech_stacks = []
+    risk_dist = {"low": 0, "medium": 0, "high": 0}
+    
+    for w in workspace_summaries:
+        # Score calculation matching WorkspaceDashboard.jsx
+        criteria = w.get("critique", {}).get("criteria", {})
+        total_crit = len(criteria)
+        passed_crit = sum(1 for v in criteria.values() if isinstance(v, dict) and v.get("pass"))
+        base_score = round((passed_crit / total_crit) * 100) if total_crit > 0 else 75
+        
+        market_potential = min(95, max(60, 100 - len(w.get("research", {}).get("existing_solutions", [])) * 7))
+        tech_feasibility = min(95, max(50, 60 + len(w.get("plan", {}).get("tech_stack", [])) * 4))
+        
+        scalable_pass = criteria.get("scalable", {}).get("pass", False) if isinstance(criteria.get("scalable"), dict) else False
+        actionable_pass = criteria.get("actionable", {}).get("pass", False) if isinstance(criteria.get("actionable"), dict) else False
+        business_viability = 85 if (scalable_pass and actionable_pass) else (75 if scalable_pass else 65)
+        
+        # COMPOSITE SCORE FORMULA — must stay in sync with WorkspaceDashboard.jsx's startupScore calculation.
+        # If you change this calculation, update the matching formula there too.
+        startup_score = round((base_score + market_potential + tech_feasibility + business_viability) / 4)
+        scores.append(startup_score)
+        
+        # Weak criteria
+        for k, v in criteria.items():
+            if isinstance(v, dict) and not v.get("pass"):
+                weak_criteria.append(k)
+                
+        # Risk calculation
+        flagged_issues = w.get("critique", {}).get("flagged_issues", [])
+        flagged_count = len(flagged_issues)
+        if flagged_count == 0:
+            risk_dist["low"] += 1
+        elif flagged_count <= 2:
+            risk_dist["medium"] += 1
+        else:
+            risk_dist["high"] += 1
+                
+        # Tech stack
+        tech_stacks.extend(w.get("plan", {}).get("tech_stack", []))
+        
+    avg_score = round(sum(scores) / len(scores)) if scores else 0
+    
+    from collections import Counter
+    most_common_weak_criterion = Counter(weak_criteria).most_common(1)[0][0] if weak_criteria else "None"
+    most_common_tech_stack = [item[0] for item in Counter(tech_stacks).most_common(3)]
+    
+    system_prompt = (
+        "You are an expert Startup Advisor analyzing a founder's past projects. "
+        "Given these exact statistics about a user's past project ideas, write a 2-3 sentence personalized insight "
+        "referencing the specific numbers provided, plus one specific, actionable suggestion for their next idea. "
+        "Do not invent any statistic not given to you."
+    )
+    
+    stats_payload = {
+        "total_ideas": total_ideas,
+        "avg_score": avg_score,
+        "most_common_weak_criterion": most_common_weak_criterion,
+        "most_common_tech_stack": most_common_tech_stack
+    }
+    
+    user_prompt = f"""
+Statistics: {json.dumps(stats_payload)}
+
+Generate JSON:
+{{
+  "total_ideas": {total_ideas},
+  "avg_score": {avg_score},
+  "most_common_weak_criterion": "{most_common_weak_criterion}",
+  "most_common_tech_stack": {json.dumps(most_common_tech_stack)},
+  "insight": "string, 2-3 sentences",
+  "suggested_focus": "string, 1 sentence"
+}}
+"""
+    try:
+        result = await call_llm_json(system_prompt, user_prompt)
+        # Ensure stats are accurate regardless of what LLM hallucinates
+        result["total_ideas"] = total_ideas
+        result["avg_score"] = avg_score
+        result["most_common_weak_criterion"] = most_common_weak_criterion
+        result["most_common_tech_stack"] = most_common_tech_stack
+        result["risk_distribution"] = risk_dist
+        logger.info("Successfully completed generate_founder_insight")
+        return result
+    except Exception as e:
+        logger.error(f"Failed generate_founder_insight: {e}")
+        return {
+            **stats_payload,
+            "insight": "Unable to generate insight at this time.",
+            "suggested_focus": "Keep iterating on your ideas."
+        }

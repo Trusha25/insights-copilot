@@ -54,3 +54,10 @@ CREATE TABLE IF NOT EXISTS user_settings (
 
 -- Add chat_history column to workspaces table if it doesn't exist
 ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS chat_history JSONB DEFAULT '[]'::jsonb;
+
+-- Add experience_level column to user_settings table if it doesn't exist
+ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS experience_level TEXT DEFAULT 'intermediate';
+
+-- Add saved_at column to workspaces table
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS saved_at TIMESTAMP WITH TIME ZONE;
+
