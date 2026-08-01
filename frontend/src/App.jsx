@@ -55,8 +55,10 @@ export default function App() {
     const saved = localStorage.getItem('theme') || 'dark';
     if (saved === 'dark') {
       document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
     }
     return saved;
   });
@@ -82,8 +84,10 @@ export default function App() {
     localStorage.setItem('theme', newTheme);
     if (newTheme === 'dark') {
       document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
     }
     try {
       await saveSettings(newTheme, primaryModel, experienceLevel);
@@ -138,8 +142,10 @@ export default function App() {
           localStorage.setItem('theme', data.theme);
           if (data.theme === 'dark') {
             document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
           } else {
             document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
           }
         }
         if (data.primary_model) {
@@ -153,8 +159,10 @@ export default function App() {
         const saved = localStorage.getItem('theme') || 'dark';
         if (saved === 'dark') {
           document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
         } else {
           document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
         }
       }
     };
@@ -410,23 +418,23 @@ export default function App() {
       ) : (
         <main className={`flex-1 min-w-0 font-sans transition-colors relative flex flex-col ${currentView === 'home' && !result
             ? 'bg-[var(--bg-primary)] starfield-bg p-6 lg:p-8 min-h-screen justify-between overflow-hidden relative z-10'
-            : 'bg-slate-50 dark:bg-[var(--bg-primary)] p-6 lg:p-10 min-h-screen text-slate-800 dark:text-slate-200'
+            : 'bg-[var(--bg-primary)] p-6 lg:p-10 min-h-screen text-[var(--text-primary)]'
           }`}>
           {/* Dashboard Header - Hidden on Landing page */}
           {!(currentView === 'home' && !result) && (
-            <header className="flex justify-between items-center border-b border-slate-200 dark:border-[var(--color-border)] pb-4 mb-8">
+            <header className="flex justify-between items-center border-b border-[var(--border-subtle)] pb-4 mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[var(--color-accent-bg)] dark:bg-[var(--color-accent-bg)] text-[var(--color-accent)] rounded-xl flex items-center justify-center shadow-sm border border-[var(--color-border)]">
+                <div className="w-10 h-10 bg-[var(--color-accent-bg)] text-[var(--color-accent)] rounded-xl flex items-center justify-center shadow-sm border border-[var(--color-border)]">
                   <svg className="w-6 h-6 animate-float" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white tracking-tight">
+                  <h1 className="text-3xl font-extrabold theme-text-title tracking-tight">
                     {currentView === 'dashboard' ? "Builder Dashboard" : (result ? "Workspace Detail" : "Insights Copilot")}
                   </h1>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+                  <p className="theme-text-muted text-sm mt-0.5">
                     {currentView === 'dashboard' ? "Juggling and executing your startup concepts" : (result ? `Analyzing: ${idea}` : "Pitch your startup idea and get instant agentic analysis")}
                   </p>
                 </div>
@@ -436,7 +444,7 @@ export default function App() {
                 {status === 'done' && result?.workspace_id && (
                   <button
                     onClick={handleToggleSaveActive}
-                    className="p-2 text-slate-400 hover:text-amber-500 rounded-xl hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors shrink-0"
+                    className="p-2 text-[var(--text-secondary)] hover:text-amber-500 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors shrink-0"
                     title={result.is_saved ? "Remove from Saved" : "Save Workspace"}
                   >
                     <svg className={`w-6 h-6 ${result.is_saved ? 'text-amber-500 fill-amber-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -451,15 +459,15 @@ export default function App() {
                       setStatus("idle");
                       setCurrentView("home");
                     }}
-                    className="px-3 py-1.5 border border-slate-200 dark:border-[var(--color-border)] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 transition-colors"
+                    className="px-3 py-1.5 border border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)] rounded-xl text-[var(--text-secondary)] transition-colors"
                   >
                     New Pitch
                   </button>
                 )}
-                <span className="bg-indigo-50 dark:bg-[var(--color-accent-bg)] text-indigo-700 dark:text-[var(--color-accent)] px-3 py-1 rounded-full border border-transparent dark:border-[var(--color-border)]">
+                <span className="bg-[var(--color-accent-bg)] text-[var(--color-accent)] px-3 py-1 rounded-full border border-[var(--border-subtle)]">
                   {status === 'loading' ? elapsedTime : status === 'done' ? elapsedTime : '~0.0s'}
                 </span>
-                <span className={`flex items-center gap-2 px-3 py-1 rounded-full ${status === 'done' ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20' : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/50'}`}>
+                <span className={`flex items-center gap-2 px-3 py-1 rounded-full ${status === 'done' ? 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400' : 'text-[var(--text-secondary)] bg-[var(--bg-secondary)]'}`}>
                   {status === 'done' ? 'Analysis completed' : status === 'loading' ? 'Analyzing...' : 'Ready'}
                   {status === 'done' && (
                     <svg className="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
@@ -547,7 +555,7 @@ export default function App() {
             ) : currentView === 'home' && !result ? (
               <div className="relative w-full min-h-full flex flex-col justify-between">
                 {/* Full Page Planet Horizon Background Overlay */}
-                <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
+                <div className={`fixed inset-0 pointer-events-none z-0 overflow-hidden select-none transition-opacity ${theme === 'light' ? 'opacity-0' : 'opacity-100'}`}>
                   <img
                     src={planetHorizonImg}
                     alt="Planet Horizon Background"
@@ -559,13 +567,13 @@ export default function App() {
 
                 {/* Immersive Landing Page Header */}
                 <div className="flex justify-between items-center w-full relative z-20 mb-8 select-none">
-                  <div className="text-[11px] font-bold text-slate-500 tracking-widest uppercase">
-                    01 <span className="text-slate-600">/</span> LANDING <span className="text-slate-600">/</span> NEW ANALYSIS
+                  <div className="text-[11px] font-bold theme-text-muted tracking-widest uppercase">
+                    01 <span className="opacity-50">/</span> LANDING <span className="opacity-50">/</span> NEW ANALYSIS
                   </div>
                   <div className="flex items-center gap-3">
                     {/* Credits Pill */}
-                    <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-xl text-slate-200 text-xs font-semibold shadow-inner backdrop-blur-md">
-                      <svg className="w-3.5 h-3.5 text-[var(--color-accent)] drop-shadow-[0_0_4px_var(--color-accent-glow)] animate-float" viewBox="0 0 24 24" fill="currentColor">
+                    <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl theme-text-title text-xs font-semibold shadow-xs">
+                      <svg className="w-3.5 h-3.5 text-[var(--color-accent)] animate-float" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2L2 12l10 10 10-10L12 2z" />
                       </svg>
                       <span className="font-extrabold tracking-tight">12,450</span>
@@ -629,13 +637,13 @@ export default function App() {
                     <span>AI-Powered Innovation OS</span>
                   </div>
                                  {/* Headline */}
-                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-4 leading-[1.15] max-w-3xl text-center mx-auto select-none">
-                    Turn Ideas into <span className="text-[#8FEA8A]">Production-</span><span className="text-[#63D7E8]">Ready</span> Projects.
+                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight theme-text-title mb-4 leading-[1.15] max-w-3xl text-center mx-auto select-none">
+                    Turn Ideas into <span className="theme-text-accent">Production-Ready</span> Projects.
                   </h1>
 
                   {/* Subtitle */}
-                  <p className="text-slate-300 text-sm md:text-base max-w-xl text-center mx-auto mb-8 leading-relaxed font-medium select-none">
-                    Our multi-agent AI system analyzes, validates, and builds execution blueprints <span className="text-[#63D7E8] font-semibold">to turn your raw concepts into real, buildable projects.</span>
+                  <p className="theme-text-muted text-sm md:text-base max-w-xl text-center mx-auto mb-8 leading-relaxed font-medium select-none">
+                    Our multi-agent AI system analyzes, validates, and builds execution blueprints <span className="text-[var(--color-accent)] font-semibold">to turn your raw concepts into real, buildable projects.</span>
                   </p>
 
                   {status === "loading" ? (
@@ -710,7 +718,7 @@ export default function App() {
                         {/* Main Textarea */}
                         <textarea
                           maxLength={2000}
-                          className="w-full h-32 bg-transparent text-white placeholder-slate-500 focus:outline-none text-base resize-none leading-relaxed p-0 border-0"
+                          className="w-full h-32 bg-transparent theme-text-title placeholder-[var(--text-muted)] focus:outline-none text-base resize-none leading-relaxed p-0 border-0"
                           placeholder="Describe your project concept, target audience, and key features in detail..."
                           value={idea}
                           onChange={(e) => setIdea(e.target.value)}
@@ -1252,12 +1260,12 @@ export default function App() {
                               </div>
                             ))}
 
-                            <div className="pt-3 border-t border-[rgba(255,255,255,0.06)] flex items-center justify-between">
-                              <span className="text-[10px] text-slate-500">
+                            <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between">
+                              <span className="text-[10px] theme-text-muted font-medium">
                                 {doneMilestones} of {totalMilestones} total milestones complete
                               </span>
                               <span className={`text-xs font-bold ${
-                                overallPct >= 75 ? 'text-[#8FEA8A]' : overallPct >= 40 ? 'text-[#63D7E8]' : 'text-[#D9A441]'
+                                overallPct >= 75 ? 'text-emerald-500' : overallPct >= 40 ? 'text-blue-500' : 'text-amber-500'
                               }`}>
                                 {overallPct >= 75 ? '🚀 On Track' : overallPct >= 40 ? '⚡ In Progress' : '🎯 Early Stage'}
                               </span>
@@ -1276,7 +1284,7 @@ export default function App() {
                       <button
                         onClick={() => setIsFounderProfileExpanded(false)}
                         aria-label="Collapse Founder Profile"
-                        className="absolute top-4 right-4 p-1.5 text-slate-500 hover:text-white transition-colors rounded-lg hover:bg-[rgba(255,255,255,0.07)] cursor-pointer"
+                        className="absolute top-4 right-4 p-1.5 theme-text-muted hover:theme-text-title transition-colors rounded-lg hover:bg-[var(--bg-secondary)] cursor-pointer"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                       </button>
@@ -1286,7 +1294,7 @@ export default function App() {
                         <p className="section-label mb-3">Avg Score</p>
                         <div className="relative w-28 h-28 flex items-center justify-center score-ring-glow">
                           <svg className="w-28 h-28 transform -rotate-90">
-                            <circle cx="56" cy="56" r="44" stroke="rgba(30,41,59,0.8)" strokeWidth="7" fill="transparent" />
+                            <circle cx="56" cy="56" r="44" stroke="var(--border-strong)" strokeWidth="7" fill="transparent" />
                             <circle
                               cx="56" cy="56" r="44"
                               stroke="url(#scoreGradient)" strokeWidth="7"
@@ -1298,14 +1306,14 @@ export default function App() {
                             />
                             <defs>
                               <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#8FEA8A" />
-                                <stop offset="100%" stopColor="#63D7E8" />
+                                <stop offset="0%" stopColor="#2563EB" />
+                                <stop offset="100%" stopColor="#0284C7" />
                               </linearGradient>
                             </defs>
                           </svg>
                           <div className="absolute flex flex-col items-center justify-center">
-                            <span className="text-2xl font-black text-white leading-none">{founderProfile.avg_score}</span>
-                            <span className="text-[9px] font-bold text-slate-500 mt-0.5 uppercase tracking-widest">/ 100</span>
+                            <span className="text-2xl font-black theme-text-title leading-none">{founderProfile.avg_score}</span>
+                            <span className="text-[9px] font-bold theme-text-muted mt-0.5 uppercase tracking-widest">/ 100</span>
                           </div>
                         </div>
                       </div>
@@ -1314,27 +1322,27 @@ export default function App() {
                       <div className="flex-1 min-w-0 pr-8">
                         <div className="flex items-center gap-2 mb-3">
                           <span className="text-base">🧬</span>
-                          <h3 className="text-base font-bold text-white">Your Founder Profile</h3>
+                          <h3 className="text-base font-bold theme-text-title">Your Founder Profile</h3>
                         </div>
-                        <p className="text-xs text-slate-400 leading-relaxed mb-4">{founderProfile.insight}</p>
+                        <p className="text-xs theme-text-muted leading-relaxed mb-4">{founderProfile.insight}</p>
                         <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
-                          <div className="p-2.5 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)]">
+                          <div className="p-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
                             <span className="section-label block mb-1.5">Weakest Skill</span>
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[rgba(217,164,65,0.1)] border border-[rgba(217,164,65,0.25)] text-[#D9A441] font-bold text-[11px] capitalize">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-[11px] capitalize">
                               {founderProfile.most_common_weak_criterion}
                             </span>
                           </div>
-                          <div className="p-2.5 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)]">
+                          <div className="p-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
                             <span className="section-label block mb-1.5">Top Stack</span>
                             <div className="flex flex-wrap gap-1">
                               {(founderProfile.most_common_tech_stack || []).slice(0, 3).map((tech, i) => (
-                                <span key={i} className="inline-block bg-[rgba(99,215,232,0.1)] border border-[rgba(99,215,232,0.22)] text-[#63D7E8] text-[10px] font-bold px-2 py-0.5 rounded-md">{tech.split(' - ')[0]}</span>
+                                <span key={i} className="inline-block bg-[var(--color-accent-bg)] border border-[var(--border-subtle)] text-[var(--color-accent)] text-[10px] font-bold px-2 py-0.5 rounded-md">{tech.split(' - ')[0]}</span>
                               ))}
                             </div>
                           </div>
                         </div>
-                        <div className="pt-3 border-t border-[rgba(255,255,255,0.06)]">
-                          <p className="text-xs font-semibold" style={{ background: 'linear-gradient(90deg,#8FEA8A,#63D7E8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        <div className="pt-3 border-t border-[var(--border-subtle)]">
+                          <p className="text-xs font-bold text-[var(--color-accent)]">
                             → {founderProfile.suggested_focus}
                           </p>
                         </div>
@@ -1344,31 +1352,31 @@ export default function App() {
                     <div className="premium-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
                         {/* Score badge */}
-                        <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-sm text-[#0B0F19] shrink-0" style={{ background: 'linear-gradient(135deg,#8FEA8A,#63D7E8,#4C8CFF)', boxShadow: '0 0 16px rgba(99,215,232,0.3)' }}>
+                        <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-sm text-white shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md">
                           {founderProfile.avg_score}
                         </div>
                         <div>
-                          <h3 className="text-white font-bold text-sm">Your Founder Profile</h3>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs mt-1 text-slate-400">
-                            <span>Weak: <span className="font-semibold text-[#D9A441] lowercase">{founderProfile.most_common_weak_criterion}</span></span>
+                          <h3 className="theme-text-title font-bold text-sm">Your Founder Profile</h3>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs mt-1 theme-text-muted">
+                            <span>Weak: <span className="font-bold text-amber-600 dark:text-amber-400 lowercase">{founderProfile.most_common_weak_criterion}</span></span>
                             <span className="opacity-30">•</span>
-                            <span>Stack: <span className="font-semibold text-white lowercase">{(founderProfile.most_common_tech_stack || []).slice(0, 2).map(t => t.split(' - ')[0]).join(', ')}</span></span>
+                            <span>Stack: <span className="font-bold theme-text-title lowercase">{(founderProfile.most_common_tech_stack || []).slice(0, 2).map(t => t.split(' - ')[0]).join(', ')}</span></span>
                           </div>
                         </div>
                       </div>
                       <button
                         onClick={() => setIsFounderProfileExpanded(true)}
-                        className="theme-btn-outline text-xs px-3.5 py-2 shrink-0 flex items-center gap-1.5 hover:border-[rgba(99,215,232,0.4)] hover:text-[#63D7E8]"
+                        className="theme-btn-outline text-xs px-3.5 py-2 shrink-0 flex items-center gap-1.5 font-bold"
                       >
-                        Read insight <span className="text-[#63D7E8]">→</span>
+                        Read insight <span className="text-[var(--color-accent)]">→</span>
                       </button>
                     </div>
                   )
                 ) : founderProfile?.insufficient_data ? (
                   <div className="premium-card p-5 text-center border-dashed">
-                    <div className="w-10 h-10 rounded-full bg-[rgba(99,215,232,0.08)] border border-[rgba(99,215,232,0.15)] flex items-center justify-center text-xl mx-auto mb-3">🧬</div>
-                    <p className="text-sm font-semibold text-white mb-1">Founder Profile Locked</p>
-                    <p className="text-xs text-slate-400">Pitch 2+ startup concepts to unlock your founder profile analysis.</p>
+                    <div className="w-10 h-10 rounded-full bg-[var(--color-accent-bg)] border border-[var(--border-subtle)] flex items-center justify-center text-xl mx-auto mb-3">🧬</div>
+                    <p className="text-sm font-bold theme-text-title mb-1">Founder Profile Locked</p>
+                    <p className="text-xs theme-text-muted">Pitch 2+ startup concepts to unlock your founder profile analysis.</p>
                   </div>
                 ) : null}
 
@@ -1377,29 +1385,29 @@ export default function App() {
                   <div className="premium-card p-5">
                     <div className="flex justify-between items-center mb-4">
                       <div>
-                        <h3 className="text-sm font-bold text-white">Portfolio Risk Distribution</h3>
+                        <h3 className="text-sm font-bold theme-text-title">Portfolio Risk Distribution</h3>
                         <p className="section-label mt-0.5">Across {workspaces.length} analyzed concepts</p>
                       </div>
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.07)]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#8FEA8A] shadow-[0_0_4px_#8FEA8A]" />
-                        <span className="text-[10px] text-slate-400 font-semibold">Portfolio Health</span>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_4px_#10B981]" />
+                        <span className="text-[10px] theme-text-muted font-bold">Portfolio Health</span>
                       </div>
                     </div>
 
                     {/* Segmented bar */}
-                    <div className="flex gap-0.5 h-3 w-full rounded-full overflow-hidden bg-[rgba(255,255,255,0.04)]">
+                    <div className="flex gap-0.5 h-3 w-full rounded-full overflow-hidden bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
                       <div
-                        className="h-full bg-gradient-to-r from-[#8FEA8A] to-[#63D7E8] rounded-full transition-all duration-700"
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-700"
                         style={{ width: `${((founderProfile.risk_distribution.low || 0) / workspaces.length) * 100}%` }}
                         title={`Low Risk: ${founderProfile.risk_distribution.low || 0}`}
                       />
                       <div
-                        className="h-full bg-gradient-to-r from-[#D9A441] to-[#F59E0B] transition-all duration-700"
+                        className="h-full bg-amber-500 transition-all duration-700"
                         style={{ width: `${((founderProfile.risk_distribution.medium || 0) / workspaces.length) * 100}%` }}
                         title={`Medium Risk: ${founderProfile.risk_distribution.medium || 0}`}
                       />
                       <div
-                        className="h-full bg-gradient-to-r from-red-500 to-red-400 rounded-full transition-all duration-700"
+                        className="h-full bg-red-500 rounded-full transition-all duration-700"
                         style={{ width: `${((founderProfile.risk_distribution.high || 0) / workspaces.length) * 100}%` }}
                         title={`High Risk: ${founderProfile.risk_distribution.high || 0}`}
                       />
@@ -1407,13 +1415,13 @@ export default function App() {
 
                     <div className="flex items-center justify-between mt-3">
                       {[
-                        { label: 'Low Risk', count: founderProfile.risk_distribution.low || 0, color: '#8FEA8A' },
-                        { label: 'Medium Risk', count: founderProfile.risk_distribution.medium || 0, color: '#D9A441' },
+                        { label: 'Low Risk', count: founderProfile.risk_distribution.low || 0, color: '#10B981' },
+                        { label: 'Medium Risk', count: founderProfile.risk_distribution.medium || 0, color: '#F59E0B' },
                         { label: 'High Risk', count: founderProfile.risk_distribution.high || 0, color: '#EF4444' },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color, boxShadow: `0 0 5px ${item.color}` }} />
-                          <span className="text-[11px] text-slate-400">{item.label}: <strong className="text-white">{item.count}</strong></span>
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />
+                          <span className="text-[11px] theme-text-muted">{item.label}: <strong className="theme-text-title">{item.count}</strong></span>
                         </div>
                       ))}
                     </div>
@@ -1424,8 +1432,8 @@ export default function App() {
                 <section>
                   <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
                     <div>
-                      <h2 className="text-base font-bold text-white">Continue where you left off</h2>
-                      {studentMode && <p className="text-xs text-slate-400 mt-0.5">Track your active startup plans, milestones, and next actions</p>}
+                      <h2 className="text-base font-extrabold theme-text-title">Continue where you left off</h2>
+                      {studentMode && <p className="text-xs theme-text-muted mt-0.5">Track your active startup plans, milestones, and next actions</p>}
                     </div>
 
                     {/* Tag filters */}
@@ -1441,8 +1449,8 @@ export default function App() {
                               onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
                               className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                 selectedTag === tag
-                                  ? 'bg-[rgba(99,215,232,0.12)] text-[#63D7E8] border border-[rgba(99,215,232,0.35)]'
-                                  : 'bg-[rgba(255,255,255,0.04)] text-slate-400 border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)] hover:text-white'
+                                  ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--border-strong)]'
+                                  : 'bg-[var(--bg-secondary)] theme-text-muted border border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:theme-text-title'
                               }`}
                             >
                               {tag}
@@ -1454,15 +1462,15 @@ export default function App() {
                   </div>
 
                   {workspacesLoading ? (
-                    <div className="premium-card p-5 flex items-center gap-3 text-xs text-slate-400">
-                      <div className="w-4 h-4 border-2 border-[#63D7E8] border-t-transparent rounded-full animate-spin" />
-                      <span>Loading workspace tracker...</span>
+                    <div className="premium-card p-5 flex items-center gap-3 text-xs theme-text-muted">
+                      <div className="w-4 h-4 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
+                      <span className="font-semibold">Loading workspace tracker...</span>
                     </div>
                   ) : workspaces.length === 0 ? (
                     <div className="premium-card p-10 text-center flex flex-col items-center justify-center">
-                      <div className="w-14 h-14 rounded-2xl bg-[rgba(99,215,232,0.07)] border border-[rgba(99,215,232,0.15)] flex items-center justify-center text-3xl mb-4">🚀</div>
-                      <p className="text-base font-bold text-white mb-1">No active plans yet</p>
-                      <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
+                      <div className="w-14 h-14 rounded-2xl bg-[var(--color-accent-bg)] border border-[var(--border-subtle)] flex items-center justify-center text-3xl mb-4">🚀</div>
+                      <p className="text-base font-extrabold theme-text-title mb-1">No active plans yet</p>
+                      <p className="text-xs theme-text-muted max-w-sm leading-relaxed">
                         Pitch your first startup idea on the home screen to kick off agentic validation and milestone tracking.
                       </p>
                       <button onClick={() => setCurrentView('home')} className="mt-5 theme-btn-solid text-xs py-2.5 px-6 flex items-center gap-2">
@@ -1487,12 +1495,12 @@ export default function App() {
                                 <div className="flex-1 min-w-0 pr-2">
                                   <h3
                                     onClick={() => handleWorkspaceSelect(ws.id, ws.idea)}
-                                    className="font-bold text-white text-sm line-clamp-1 hover:text-[#63D7E8] transition-colors cursor-pointer leading-snug"
+                                    className="font-bold theme-text-title text-sm line-clamp-1 hover:text-[var(--color-accent)] transition-colors cursor-pointer leading-snug"
                                   >
                                     {ws.idea}
                                   </h3>
                                   <div className="flex items-center gap-2 mt-1.5">
-                                    <span className="inline-block bg-[rgba(99,215,232,0.1)] border border-[rgba(99,215,232,0.2)] text-[#63D7E8] text-[9.5px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                    <span className="inline-block bg-[var(--color-accent-bg)] border border-[var(--border-subtle)] text-[var(--color-accent)] text-[9.5px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider">
                                       {ws.tags && ws.tags[0] ? ws.tags[0] : 'AI Startup'}
                                     </span>
                                   </div>
@@ -1511,10 +1519,10 @@ export default function App() {
                                     }
                                   }}
                                   aria-label={ws.is_saved ? "Remove from favorites" : "Save to favorites"}
-                                  className="p-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.07)] transition-colors cursor-pointer shrink-0"
+                                  className="p-1.5 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer shrink-0"
                                   title={ws.is_saved ? "Saved Favorite" : "Save to Favorites"}
                                 >
-                                  <svg className={`w-4 h-4 ${ws.is_saved ? 'text-[#4C8CFF] fill-[#4C8CFF]' : 'text-slate-500'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                  <svg className={`w-4 h-4 ${ws.is_saved ? 'text-[#2563EB] fill-[#2563EB]' : 'theme-text-muted'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499c.158-.343.344-.66.52-.947.176.287.362.604.52.947l2.193 4.444a1 1 0 00.758.552l4.904.713c.38.055.53.518.257.788l-3.548 3.46a1 1 0 00-.287.885l.838 4.886c.065.378-.33.666-.67.487l-4.387-2.31a1 1 0 00-.93 0l-4.387 2.31c-.34.179-.735-.109-.67-.487l.838-4.886a1 1 0 00-.287-.885l-3.548-3.46c-.273-.27-.123-.733.257-.788l4.904-.713a1 1 0 00.758-.552l2.193-4.444z" />
                                   </svg>
                                 </button>
@@ -1524,21 +1532,21 @@ export default function App() {
                               {ws.total_milestones > 0 ? (
                                 <div className="space-y-2">
                                   <div className="flex justify-between items-center text-xs">
-                                    <span className="text-slate-400 font-medium">Milestone progress</span>
-                                    <span className="text-white font-bold">{ws.milestone_progress}</span>
+                                    <span className="theme-text-muted font-semibold">Milestone progress</span>
+                                    <span className="theme-text-title font-extrabold">{ws.milestone_progress}</span>
                                   </div>
                                   {/* Premium progress bar */}
-                                  <div className="premium-progress-track">
+                                  <div className="premium-progress-track bg-[var(--border-subtle)]">
                                     <div className="premium-progress-fill" style={{ width: `${progressPercentage}%` }} />
                                   </div>
                                   {/* Next step inset */}
-                                  <div className="mt-2 p-3 rounded-xl bg-[rgba(255,255,255,0.03)] border-l-2 border-l-[rgba(99,215,232,0.5)] border border-[rgba(255,255,255,0.06)]">
+                                  <div className="mt-2 p-3 rounded-xl bg-[var(--bg-secondary)] border-l-2 border-l-[var(--color-accent)] border border-[var(--border-subtle)]">
                                     <p className="section-label mb-0.5">Next Step</p>
-                                    <p className="text-xs font-bold text-white line-clamp-1">{ws.next_step_title}</p>
+                                    <p className="text-xs font-bold theme-text-title line-clamp-1">{ws.next_step_title}</p>
                                   </div>
                                 </div>
                               ) : (
-                                <p className="text-slate-500 text-xs my-3 italic">No timeline milestones parsed yet.</p>
+                                <p className="theme-text-muted text-xs my-3 italic">No timeline milestones parsed yet.</p>
                               )}
                             </div>
 
@@ -1581,10 +1589,10 @@ export default function App() {
                   {/* Quick Actions */}
                   <div className="premium-card p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="w-7 h-7 rounded-lg bg-[rgba(76,140,255,0.12)] border border-[rgba(76,140,255,0.25)] flex items-center justify-center text-[#4C8CFF]">
+                      <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                       </div>
-                      <h3 className="text-sm font-bold text-white">Quick Actions</h3>
+                      <h3 className="text-sm font-extrabold theme-text-title">Quick Actions</h3>
                     </div>
                     <div className="space-y-1">
                       <button
@@ -1592,8 +1600,8 @@ export default function App() {
                         className="command-row"
                         title="Pitch a new startup idea for agentic analysis"
                       >
-                        <span className="cmd-icon bg-[rgba(143,234,138,0.08)] border border-[rgba(143,234,138,0.15)] text-[#8FEA8A]">✨</span>
-                        <span>New Analysis</span>
+                        <span className="cmd-icon bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">✨</span>
+                        <span className="theme-text-title font-semibold">New Analysis</span>
                         <svg className="cmd-arrow w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                       </button>
                       <button
@@ -1601,8 +1609,8 @@ export default function App() {
                         className="command-row"
                         title="Review past analysis history & saved plans"
                       >
-                        <span className="cmd-icon bg-[rgba(99,215,232,0.08)] border border-[rgba(99,215,232,0.15)] text-[#63D7E8]">📚</span>
-                        <span>View History</span>
+                        <span className="cmd-icon bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400">📚</span>
+                        <span className="theme-text-title font-semibold">View History</span>
                         <svg className="cmd-arrow w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                       </button>
                       <button
@@ -1610,8 +1618,8 @@ export default function App() {
                         className="command-row"
                         title="Configure AI models and profile preferences"
                       >
-                        <span className="cmd-icon bg-[rgba(76,140,255,0.08)] border border-[rgba(76,140,255,0.15)] text-[#4C8CFF]">⚙️</span>
-                        <span>Settings</span>
+                        <span className="cmd-icon bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">⚙️</span>
+                        <span className="theme-text-title font-semibold">Settings</span>
                         <svg className="cmd-arrow w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                       </button>
                     </div>
@@ -1620,25 +1628,25 @@ export default function App() {
                   {/* Needs Attention */}
                   <div className="premium-card p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="w-7 h-7 rounded-lg bg-[rgba(217,164,65,0.12)] border border-[rgba(217,164,65,0.25)] flex items-center justify-center text-[#D9A441]">
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                       </div>
-                      <h3 className="text-sm font-bold text-white">Needs Attention</h3>
+                      <h3 className="text-sm font-extrabold theme-text-title">Needs Attention</h3>
                       {notifications.length > 0 && (
-                        <span className="ml-auto text-[10px] font-bold text-[#D9A441] bg-[rgba(217,164,65,0.12)] border border-[rgba(217,164,65,0.25)] px-2 py-0.5 rounded-full">{notifications.length}</span>
+                        <span className="ml-auto text-[10px] font-extrabold text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">{notifications.length}</span>
                       )}
                     </div>
                     {notifications.length > 0 ? (
                       <div className="flex flex-col gap-2">
                         {notifications.map((notif, i) => (
-                          <div key={i} className="attention-item">
+                          <div key={i} className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
-                                <p className="text-xs font-bold text-white line-clamp-1">{notif.idea}</p>
-                                <p className="text-[11px] text-[#D9A441]/80 mt-0.5 leading-relaxed">{notif.message}</p>
+                                <p className="text-xs font-bold theme-text-title line-clamp-1">{notif.idea}</p>
+                                <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5 leading-relaxed font-medium">{notif.message}</p>
                               </div>
                               <button
-                                className="fix-now-btn shrink-0"
+                                className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-[10px] transition-colors cursor-pointer shrink-0"
                                 onClick={async () => {
                                   const ws = workspaces.find(w => w.idea === notif.idea);
                                   if (ws) {
@@ -1656,7 +1664,7 @@ export default function App() {
                     ) : (
                       <div className="py-6 text-center">
                         <div className="text-2xl mb-2">🎉</div>
-                        <p className="text-xs text-slate-500 font-medium">All caught up!</p>
+                        <p className="text-xs theme-text-muted font-medium">All caught up!</p>
                       </div>
                     )}
                   </div>
@@ -1664,21 +1672,21 @@ export default function App() {
                   {/* Recent Activity Timeline */}
                   <div className="premium-card p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="w-7 h-7 rounded-lg bg-[rgba(143,234,138,0.12)] border border-[rgba(143,234,138,0.25)] flex items-center justify-center text-[#8FEA8A]">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       </div>
-                      <h3 className="text-sm font-bold text-white">Recent Activity</h3>
+                      <h3 className="text-sm font-extrabold theme-text-title">Recent Activity</h3>
                     </div>
                     {activity.length > 0 ? (
-                      <div className="flex flex-col gap-3 relative pl-4 before:absolute before:left-[7px] before:top-1 before:bottom-1 before:w-px before:bg-[rgba(255,255,255,0.07)]">
+                      <div className="flex flex-col gap-3 relative pl-4 before:absolute before:left-[7px] before:top-1 before:bottom-1 before:w-px before:bg-[var(--border-subtle)]">
                         {activity.slice(0, 5).map((act, i) => {
                           const dotClass = act.type === 'analyzed' ? 'timeline-dot-green' : act.type === 'saved' ? 'timeline-dot-blue' : act.type === 'telegram_linked' ? 'timeline-dot-cyan' : 'timeline-dot-amber';
                           return (
-                            <div key={i} className="flex gap-3 items-start text-xs relative group hover:bg-[rgba(255,255,255,0.03)] rounded-xl p-1.5 -mx-1.5 transition-colors">
+                            <div key={i} className="flex gap-3 items-start text-xs relative group hover:bg-[var(--bg-secondary)] rounded-xl p-1.5 -mx-1.5 transition-colors">
                               <span className={`${dotClass} relative z-10 mt-1 shrink-0`} />
                               <div className="min-w-0 flex-1">
-                                <p className="text-white font-medium line-clamp-1 group-hover:text-[#63D7E8] transition-colors">{act.message}</p>
-                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                <p className="theme-text-title font-bold line-clamp-1 group-hover:text-[var(--color-accent)] transition-colors">{act.message}</p>
+                                <p className="text-[10px] theme-text-muted mt-0.5 font-medium">
                                   {new Date(act.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </p>
                               </div>
@@ -1689,7 +1697,7 @@ export default function App() {
                     ) : (
                       <div className="py-6 text-center">
                         <div className="text-2xl mb-2">🗺️</div>
-                        <p className="text-xs text-slate-500">No recent activity. Pitch your first concept to see your journey here!</p>
+                        <p className="text-xs theme-text-muted">No recent activity. Pitch your first concept to see your journey here!</p>
                       </div>
                     )}
                   </div>

@@ -110,7 +110,7 @@ export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSa
           className={`pb-3 px-4 text-xs font-semibold transition-all relative cursor-pointer ${
             activeTab === 'history'
               ? 'text-[var(--accent-end)] border-b-2 border-[var(--accent-start)] font-bold'
-              : 'text-[var(--text-secondary)] hover:text-white'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
           All History
@@ -120,7 +120,7 @@ export default function HistoryView({ onSelectItem, loadedChats = {}, onToggleSa
           className={`pb-3 px-4 text-xs font-semibold transition-all relative cursor-pointer ${
             activeTab === 'saved'
               ? 'text-[var(--accent-end)] border-b-2 border-[var(--accent-start)] font-bold'
-              : 'text-[var(--text-secondary)] hover:text-white'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
           Saved Favorites

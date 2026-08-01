@@ -90,6 +90,53 @@
   --color-accent-bg: rgba(99, 215, 232, 0.12);
   --color-accent-text: #63D7E8;
   --color-accent-glow: rgba(99, 215, 232, 0.25);
+
+  /* High-contrast floating chat pill */
+  --chat-pill-bg: #1E293B;
+  --chat-pill-border: #475569;
+}
+
+/* ========== LIGHT THEME (High Contrast SaaS Aesthetic) ========== */
+.light, :root.light {
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+
+  --border-subtle: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --color-border: #E2E8F0;
+  --color-border-hover: #CBD5E1;
+  --color-border-focus: #2563EB;
+
+  --accent-start: #2563EB;
+  --accent-mid: #0284C7;
+  --accent-end: #4F46E5;
+
+  /* Pitch dark black & dark slate for ultra-crisp text */
+  --text-primary: #000000;
+  --text-secondary: #0F172A;
+  --text-title: #000000;
+  --text-body: #0A0E1A;
+  --text-muted: #334155;
+
+  --glow-accent: #0284C7;
+
+  --warning-amber: #B45309;
+  --warning-bg: #FFFBEB;
+  --warning-border: #FDE68A;
+
+  --color-accent: #2563EB;
+  --color-accent-hover: #1D4ED8;
+  --color-accent-bg: rgba(37, 99, 235, 0.08);
+  --color-accent-text: #2563EB;
+  --color-accent-glow: rgba(37, 99, 235, 0.18);
+
+  --chat-pill-bg: #FFFFFF;
+  --chat-pill-border: #CBD5E1;
+
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
 }
 
 @layer base {
@@ -312,19 +359,19 @@
 
 /* Glassmorphism panel styling */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.65);
+  background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
 }
 .glass-panel:hover {
   border-color: var(--border-strong);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
+  box-shadow: var(--shadow-md);
 }
 
 /* Input area glassmorphism */
 .glass-input {
-  background: rgba(17, 24, 39, 0.75);
+  background: var(--bg-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
@@ -334,12 +381,12 @@
 }
 .glass-input:focus {
   border-color: var(--accent-mid);
-  box-shadow: 0 0 25px var(--color-accent-glow);
+  box-shadow: 0 0 15px var(--color-accent-glow);
 }
 
-/* Horizon Glows - Green-Cyan-Blue Gradient Edition */
+/* Horizon Glows */
 .planet-glow-green, .planet-glow-blue {
-  background: radial-gradient(circle at bottom, rgba(99, 215, 232, 0.2) 0%, rgba(76, 140, 255, 0.06) 45%, rgba(11, 15, 25, 0) 75%);
+  background: radial-gradient(circle at bottom, rgba(99, 215, 232, 0.15) 0%, rgba(76, 140, 255, 0.04) 45%, transparent 75%);
 }
 
 /* Floating animation */
@@ -376,8 +423,8 @@
 
 /* Premium Card: elevated glass surface with ambient glow on hover */
 .premium-card {
-  background: rgba(17, 24, 39, 0.80);
-  border: 1px solid rgba(30, 41, 59, 0.9);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -406,18 +453,15 @@
   opacity: 1;
 }
 .premium-card:hover {
-  border-color: rgba(99, 215, 232, 0.22);
+  border-color: var(--border-strong);
   transform: translateY(-2px);
-  box-shadow:
-    0 0 0 1px rgba(99, 215, 232, 0.08),
-    0 8px 32px rgba(0, 0, 0, 0.32),
-    0 0 60px rgba(99, 215, 232, 0.04);
+  box-shadow: var(--shadow-md);
 }
 
 /* KPI Stat Card: accent-bordered left edge, big number */
 .kpi-card {
-  background: rgba(17, 24, 39, 0.85);
-  border: 1px solid rgba(30, 41, 59, 0.9);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -430,11 +474,9 @@
     box-shadow var(--dur-base) var(--ease-out);
 }
 .kpi-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(99, 215, 232, 0.25);
-  box-shadow:
-    0 0 0 1px rgba(99, 215, 232, 0.08),
-    0 12px 40px rgba(0, 0, 0, 0.36);
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
 }
 .kpi-card .kpi-accent-bar {
   position: absolute;
