@@ -150,6 +150,14 @@ def validate_uuid(id_str: str, name: str = "workspace_id"):
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid {name} format. Must be a valid UUID.")
 
+@app.get("/")
+def root():
+    return {
+        "message": "Insights Copilot API is running!",
+        "health": "/api/health",
+        "docs": "/docs"
+    }
+
 @app.get("/api/health")
 def health_check():
     key = os.getenv("GROQ_API_KEY", "").strip()
