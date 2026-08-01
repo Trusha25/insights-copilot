@@ -73,7 +73,7 @@ export default function PlanCard({ status, roadmap, plan, openPanel, currentMile
 
                       {/* Tasks Infographic Layout */}
                       <div className="space-y-6 flex-1">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-[var(--color-border)] pb-2 mb-6">
+                        <h3 className="text-lg font-bold theme-text-title flex items-center gap-2 border-b border-[var(--color-border)] pb-2 mb-6">
                           <svg className="w-5 h-5 text-[var(--color-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                           </svg>
@@ -97,7 +97,7 @@ export default function PlanCard({ status, roadmap, plan, openPanel, currentMile
                                       <span className="font-bold text-xs">{idx + 1}</span>
                                     </div>
                                     <div className="flex-1 min-w-0 space-y-3">
-                                      <h4 className="font-bold text-lg text-white leading-tight">{task.title}</h4>
+                                      <h4 className="font-bold text-lg theme-text-title leading-tight">{task.title}</h4>
                                       
                                       {task.description && (
                                         <p className="text-base text-slate-400 font-medium leading-relaxed">

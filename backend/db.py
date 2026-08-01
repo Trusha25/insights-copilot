@@ -129,10 +129,20 @@ def create_workspace(workspace_id: str, idea: str, research: dict, plan: dict, u
 def delete_workspace(workspace_id: str, user_id: str = None):
     try:
         supabase = get_supabase()
+        # 1. Delete the workspace itself
         query = supabase.table("workspaces").delete().eq("id", workspace_id)
         if user_id:
             query = query.eq("user_id", user_id)
         query.execute()
+        # 2. Delete matching history records so they don't reappear on refresh.
+        #    The history table stores workspace_id inside result JSON.
+        try:
+            hist_query = supabase.table("history").delete().eq("result->>workspace_id", workspace_id)
+            if user_id:
+                hist_query = hist_query.eq("user_id", user_id)
+            hist_query.execute()
+        except Exception as hist_err:
+            logger.warning(f"Could not delete history records for workspace {workspace_id}: {hist_err}")
     except Exception as e:
         logger.error(f"Failed to delete workspace from Supabase: {e}")
 

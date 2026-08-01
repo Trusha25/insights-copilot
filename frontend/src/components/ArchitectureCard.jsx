@@ -15,7 +15,7 @@ export default function ArchitectureCard({ status, plan, openPanel }) {
 
   if (!plan || Object.keys(plan).length === 0) {
     return (
-      <div className="p-6 text-center text-slate-500 font-medium bg-[var(--bg-surface)] rounded-xl border border-[var(--color-border)]">
+      <div className="p-6 text-center theme-text-muted font-medium bg-[var(--bg-surface)] rounded-xl border border-[var(--color-border)]">
         No architectural data was generated for this workspace.
       </div>
     );
@@ -70,7 +70,7 @@ export default function ArchitectureCard({ status, plan, openPanel }) {
                         <div key={tIdx} className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--color-border)] flex flex-col gap-2 shadow-sm transition-all hover:border-[var(--color-border-hover)]">
                           <span className="text-xl font-bold text-[var(--color-accent)]">{techName}</span>
                           {parts.length > 1 && (
-                            <span className="text-base text-slate-400 font-medium leading-relaxed">{techReason}</span>
+                            <span className="text-base theme-text-muted font-medium leading-relaxed">{techReason}</span>
                           )}
                         </div>
                       );

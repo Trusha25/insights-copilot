@@ -172,10 +172,10 @@ export default function LoginView() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 009 11V7a3 3 0 116 0v4c0 1.542.42 2.97 1.135 4.197m0 0a13.916 13.916 0 013.44 2.04M12 11a14.28 14.28 0 003.44-2.04m-3.44 2.04c-.722 0-1.428-.15-2.073-.418m2.073.418c.718 0 1.41-.144 2.047-.406m0 0c.056-.023.111-.047.166-.072m0 0a13.916 13.916 0 003.44-2.04M12 14a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight">
+          <h2 className="text-3xl font-extrabold theme-text-title tracking-tight">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h2>
-          <p className="text-slate-400 mt-2 text-sm">
+          <p className="theme-text-muted mt-2 text-sm">
             {isSignUp ? 'Start analyzing startup ideas in seconds' : 'Sign in to access your Startup Insights Copilot'}
           </p>
         </div>
@@ -208,7 +208,7 @@ export default function LoginView() {
               <input
                 type="text"
                 required
-                className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)] focus:ring-2 focus:ring-[var(--color-accent)]/10 rounded-2xl text-white outline-none transition-all placeholder:text-slate-500 text-sm"
+                className="w-full px-4 py-2.5 bg-[var(--bg-surface)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)] focus:ring-2 focus:ring-[var(--color-accent)]/10 rounded-2xl theme-text-title outline-none transition-all placeholder:text-slate-500 text-sm"
                 placeholder="John Doe"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -425,9 +425,9 @@ export default function LoginView() {
         <button
           onClick={handleGitHubLogin}
           disabled={loading}
-          className="w-full py-3.5 bg-[var(--bg-surface)] hover:bg-[var(--color-accent-bg)]/50 text-white border border-[var(--color-border)] hover:border-[var(--color-border-hover)] font-semibold rounded-2xl transition-all flex items-center justify-center gap-3 text-sm cursor-pointer"
+          className="w-full py-3.5 bg-[var(--bg-surface)] hover:bg-[var(--color-accent-bg)]/50 theme-text-title border border-[var(--color-border)] hover:border-[var(--color-border-hover)] font-semibold rounded-2xl transition-all flex items-center justify-center gap-3 text-sm cursor-pointer"
         >
-          <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 theme-text-title" fill="currentColor" viewBox="0 0 24 24">
             <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" clipRule="evenodd" />
           </svg>
           <span>GitHub</span>
