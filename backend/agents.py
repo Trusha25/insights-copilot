@@ -4,6 +4,7 @@ import json
 import logging
 import asyncio
 from datetime import datetime
+from typing import List, Dict, Optional, Any
 import httpx
 from dotenv import load_dotenv
 from groq import AsyncGroq
@@ -684,7 +685,7 @@ Generate JSON:
         logger.error(f"Failed mentor_agent: {e}")
         return fallback
 
-def compute_milestone_pace(all_completions: list[dict]) -> dict:
+def compute_milestone_pace(all_completions: List[dict]) -> dict:
     try:
         pool_deltas = []
         qualifying_workspace_count = 0
@@ -716,7 +717,7 @@ def compute_milestone_pace(all_completions: list[dict]) -> dict:
         logger.error(f"Failed to compute milestone pace: {e}")
         return {"avg_days": None, "label": "Not enough data", "workspace_count": 0}
 
-async def generate_founder_insight(workspace_summaries: list[dict]) -> dict:
+async def generate_founder_insight(workspace_summaries: List[dict]) -> dict:
     logger.info("Starting generate_founder_insight")
     if len(workspace_summaries) < 2:
         return {"total_ideas": len(workspace_summaries), "insufficient_data": True}

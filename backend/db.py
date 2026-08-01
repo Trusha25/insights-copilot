@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from typing import List, Dict, Optional, Any
 from supabase import create_client, Client
 from datetime import datetime
 
