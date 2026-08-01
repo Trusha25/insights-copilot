@@ -31,13 +31,13 @@ export default function PlanCard({ status, roadmap, plan, openPanel, currentMile
 
       <div className="space-y-8 relative before:pointer-events-none before:absolute before:inset-0 before:ml-[19px] before:-translate-x-px before:h-full before:w-0.5 before:bg-[var(--color-border-hover)]">
         {roadmap.slice(0, 8).map((item, index) => {
-          // Gold theme color sequence matching visual mockup tones
+          // Green theme color sequence matching visual mockup tones
           const colors = [
-            { bg: "bg-[var(--color-accent)] text-[#030407]", light: "bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-border-hover)]" },
-            { bg: "bg-[#cfb57f] text-[#030407]", light: "bg-[var(--color-accent-bg)]/80 text-[#cfb57f] border border-[var(--color-border-hover)]" },
-            { bg: "bg-[#bfa56f] text-[#030407]", light: "bg-[var(--color-accent-bg)]/60 text-[#bfa56f] border border-[var(--color-border)]" },
-            { bg: "bg-[#af955f] text-[#030407]", light: "bg-[var(--color-accent-bg)]/40 text-[#af955f] border border-[var(--color-border)]" },
-            { bg: "bg-[#9f854f] text-[#030407]", light: "bg-[var(--color-accent-bg)]/20 text-[#9f854f] border border-[var(--color-border)]" },
+            { bg: "bg-gradient-to-r from-[var(--accent-start)] to-[var(--accent-end)] text-[#0A0E0C]", light: "bg-[var(--color-accent-bg)] text-[var(--accent-end)] border border-[var(--color-border-hover)]" },
+            { bg: "bg-[#3D9F4A] text-[#0A0E0C]", light: "bg-[var(--color-accent-bg)]/80 text-[var(--accent-end)] border border-[var(--color-border-hover)]" },
+            { bg: "bg-[#338A3F] text-[#F5F7F5]", light: "bg-[var(--color-accent-bg)]/60 text-[var(--accent-end)] border border-[var(--border-subtle)]" },
+            { bg: "bg-[#297534] text-[#F5F7F5]", light: "bg-[var(--color-accent-bg)]/40 text-[var(--accent-end)] border border-[var(--border-subtle)]" },
+            { bg: "bg-[#20602A] text-[#F5F7F5]", light: "bg-[var(--color-accent-bg)]/20 text-[var(--accent-end)] border border-[var(--border-subtle)]" },
           ];
           const color = colors[index % colors.length];
           const isCurrent = index === currentMilestoneIndex;
@@ -45,7 +45,7 @@ export default function PlanCard({ status, roadmap, plan, openPanel, currentMile
 
           return (
             <div key={index} className="relative flex items-start gap-5">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shrink-0 shadow-sm outline outline-4 outline-[#07090e] dark:outline-[#07090e] outline-white ${isCompleted ? 'bg-emerald-500 text-white' : isCurrent ? color.bg + ' ring-2 ring-[var(--color-accent)]/50 ring-offset-2 ring-offset-[#07090e]' : color.bg}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-base z-10 shrink-0 shadow-sm outline outline-4 outline-[#0A0E0C] dark:outline-[#0A0E0C] outline-white ${isCompleted ? 'bg-[var(--accent-start)] text-[#0A0E0C]' : isCurrent ? color.bg + ' ring-2 ring-[var(--glow-accent)]/50 ring-offset-2 ring-offset-[#0A0E0C]' : color.bg}`}>
                 {isCompleted ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 ) : index + 1}

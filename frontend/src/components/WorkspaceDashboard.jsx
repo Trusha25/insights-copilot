@@ -678,7 +678,7 @@ export default function WorkspaceDashboard({
             </button>
             
             {expanded.techAnalysis && (
-              <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45 space-y-6">
+              <div className="p-6 border-t border-[var(--color-border)] bg-[#0A0E0C]/45 space-y-6">
                 <ResearchCard status={status} research={result?.research} critique={result?.critique} idea={idea} plan={result?.plan} workspaceId={workspaceId} onRefreshSuccess={onRefreshResearch} openPanel={openPanel} experienceLevel={experienceLevel} />
               </div>
             )}
@@ -710,7 +710,7 @@ export default function WorkspaceDashboard({
             </button>
 
             {expanded.architecture && (
-              <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
+              <div className="p-6 border-t border-[var(--color-border)] bg-[#0A0E0C]/45">
                 <ArchitectureCard status={status} plan={result?.plan} openPanel={openPanel} />
               </div>
             )}
@@ -742,7 +742,7 @@ export default function WorkspaceDashboard({
             </button>
 
             {expanded.roadmap && (
-              <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
+              <div className="p-6 border-t border-[var(--color-border)] bg-[#0A0E0C]/45">
                 <PlanCard status={status} roadmap={result?.plan?.roadmap} plan={result?.plan} openPanel={openPanel} currentMilestoneIndex={result?.current_milestone_index || 0} onMilestoneComplete={onMilestoneComplete} milestoneCompleting={milestoneCompleting} />
               </div>
             )}
@@ -774,7 +774,7 @@ export default function WorkspaceDashboard({
             </button>
 
             {expanded.resources && (
-              <div className="p-6 border-t border-[var(--color-border)] bg-[#030407]/45">
+              <div className="p-6 border-t border-[var(--color-border)] bg-[#0A0E0C]/45">
                 <ResourcesCard status={status} research={result?.research} newSourceUrls={newSourceUrls} openPanel={openPanel} />
               </div>
             )}

@@ -124,11 +124,11 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
                 <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                   <div className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed shadow-sm ${
                     isUser 
-                      ? 'bg-[var(--color-accent)] text-[#030407] rounded-br-none font-semibold' 
+                      ? 'bg-[var(--color-accent)] text-[#0A0E0C] rounded-br-none font-semibold' 
                       : 'bg-[var(--bg-surface)] border border-[var(--color-border)] text-slate-700 dark:text-slate-300 rounded-bl-none shadow-inner'
                   }`}>
                     {/* Role Header */}
-                    <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70 ${isUser ? 'text-[#030407]/75 font-extrabold' : 'text-[var(--color-accent)]'}`}>
+                    <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70 ${isUser ? 'text-[#0A0E0C]/75 font-extrabold' : 'text-[var(--color-accent)]'}`}>
                       {isUser ? 'You' : 'AI Consultant'}
                     </div>
                     
@@ -197,7 +197,7 @@ export default function FollowUpChat({ workspaceId, initialHistory = [], idea, p
           disabled={isLoading || !input.trim()}
           className="w-10 h-10 theme-btn-primary rounded-xl flex items-center justify-center transition-all shrink-0 active:scale-95 cursor-pointer hover:translate-y-0"
         >
-          <svg className="w-5 h-5 transform rotate-90 text-[#030407]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 transform rotate-90 text-[#0A0E0C]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         </button>

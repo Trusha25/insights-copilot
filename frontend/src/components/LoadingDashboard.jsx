@@ -192,12 +192,12 @@ export default function LoadingDashboard({ idea, isDataReady, onCancel, onAnimat
                 >
                   {/* Top line with Checkmark badge */}
                   <div className="flex justify-between items-start">
-                    <div className={`p-2.5 rounded-xl ${isRunning ? 'bg-[var(--color-accent)] text-[#030407]' : 'bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-border-hover)]'}`}>
+                    <div className={`p-2.5 rounded-xl ${isRunning ? 'bg-[var(--color-accent)] text-[#0A0E0C]' : 'bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-border-hover)]'}`}>
                       {agent.icon}
                     </div>
 
                     {isCompleted && (
-                      <div className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-[#030407] flex items-center justify-center text-xs font-black shadow-md shadow-[var(--color-accent-glow)] border border-[var(--color-border)]">
+                      <div className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-[#0A0E0C] flex items-center justify-center text-xs font-black shadow-md shadow-[var(--color-accent-glow)] border border-[var(--color-border)]">
                         ✓
                       </div>
                     )}
